@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Controle de caixa e saúde financeira para pequenos negócios" />
+  <title>Fluxo | Controle de Caixa</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --panel-soft: #f8fafc;
+      --ink: #172033;
+      --muted: #6e788a;
+      --border: #e8ecf2;
+      --primary: #2e5bff;
+      --primary-dark: #2345c8;
+      --primary-soft: #edf2ff;
+      --green: #15966b;
+      --green-soft: #eaf8f2;
+      --red: #d95c63;
+      --red-soft: #fff0f0;
+      --amber: #c88920;
+      --amber-soft: #fff7e8;
+      --purple: #8157d9;
+      --shadow: 0 12px 30px rgba(31, 44, 72, .07);
+      --radius: 18px;
+      --radius-sm: 11px;
+      --sidebar: 248px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 14px; }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; border: 0; }
+    .app-shell { display: flex; min-height: 100vh; }
+    .sidebar { width: var(--sidebar); position: fixed; inset: 0 auto 0 0; background: #111a2e; color: #dbe4ff; padding: 24px 16px; display: flex; flex-direction: column; z-index: 20; }
+    .brand { display: flex; align-items: center; gap: 11px; padding: 0 10px 27px; }
+    .brand-mark { width: 35px; height: 35px; border-radius: 11px; background: linear-gradient(135deg, #77a0ff, #2e5bff 62%, #192e8f); display: grid; place-items: center; color: #fff; font-size: 18px; font-weight: 800; box-shadow: 0 7px 20px rgba(46, 91, 255, .35); }
+    .brand strong { display: block; color: #fff; font-size: 16px; letter-spacing: -.3px; }
+    .brand small { color: #8692af; font-size: 10px; letter-spacing: .4px; text-transform: uppercase; }
+    .nav-label { color: #65718f; font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; padding: 14px 12px 8px; font-weight: 700; }
+    .nav { display: grid; gap: 4px; }
+    .nav button { color: #aab5cd; background: transparent; padding: 11px 12px; display: flex; align-items: center; gap: 12px; text-align: left; border-radius: 10px; transition: .2s; }
+    .nav button:hover { color: #fff; background: rgba(255,255,255,.06); }
+    .nav button.active { background: linear-gradient(90deg, rgba(60, 101, 242, .98), rgba(44, 80, 192, .7)); color: #fff; box-shadow: inset 3px 0 0 #a5bcff; }
+    .nav-icon { width: 21px; text-align: center; font-size: 16px; opacity: .95; }
+    .sidebar-bottom { margin-top: auto; border-top: 1px solid rgba(255,255,255,.08); padding: 17px 10px 2px; color: #7e8ba8; font-size: 11px; line-height: 1.6; }
+    .sidebar-bottom b { color: #dbe4ff; font-size: 12px; }
+    .main-wrap { margin-left: var(--sidebar); min-width: 0; width: calc(100% - var(--sidebar)); }
+    .topbar { height: 75px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,.84); backdrop-filter: blur(16px); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; position: sticky; top: 0; z-index: 10; }
+    .topbar-left { display: flex; align-items: center; gap: 20px; }
+    .page-kicker { color: var(--muted); font-size: 12px; }
+    .search { width: 230px; background: var(--panel-soft); border: 1px solid var(--border); border-radius: 10px; height: 38px; padding: 0 12px 0 35px; outline: none; color: var(--ink); }
+    .search-wrap { position: relative; }
+    .search-wrap span { position: absolute; left: 12px; top: 8px; color: var(--muted); font-size: 16px; }
+    .topbar-actions { display: flex; align-items: center; gap: 10px; }
+    .month-picker { height: 38px; border: 1px solid var(--border); border-radius: 10px; background: #fff; color: var(--ink); padding: 0 10px; outline: none; }
+    .user-chip { display: flex; align-items: center; gap: 9px; margin-left: 8px; padding-left: 12px; border-left: 1px solid var(--border); }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: #dfe7ff; color: var(--primary-dark); display: grid; place-items: center; font-weight: 750; font-size: 12px; }
+    .user-chip strong { font-size: 12px; display: block; }
+    .user-chip small { color: var(--muted); font-size: 10px; display: block; }
+    .content { padding: 29px 32px 50px; max-width: 1600px; margin: auto; }
+    .page { display: none; animation: fade .25s ease; }
+    .page.active { display: block; }
+    @keyframes fade { from { opacity: .3; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+    .page-heading { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; margin-bottom: 24px; }
+    .page-heading h1 { margin: 0 0 5px; font-size: 26px; letter-spacing: -.7px; }
+    .page-heading p { margin: 0; color: var(--muted); }
+    .heading-actions { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .btn { min-height: 38px; padding: 0 14px; border-radius: 9px; font-weight: 650; display: inline-flex; align-items: center; justify-content: center; gap: 7px; transition: .18s; }
+    .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 6px 13px rgba(46,91,255,.18); }
+    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    .btn-secondary { background: #fff; color: var(--ink); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: #cdd6e6; background: #fafbfe; }
+    .btn-ghost { background: transparent; color: var(--primary); padding: 0 7px; min-height: 28px; }
+    .btn-danger { background: var(--red-soft); color: var(--red); }
+    .btn-success { background: var(--green-soft); color: var(--green); }
+    .btn-sm { min-height: 31px; padding: 0 10px; font-size: 12px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 15px; margin-bottom: 17px; }
+    .stat-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 19px; box-shadow: var(--shadow); min-width: 0; }
+    .stat-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 12px; }
+    .stat-icon { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-size: 16px; }
+    .icon-blue { background: var(--primary-soft); color: var(--primary); }
+    .icon-green { background: var(--green-soft); color: var(--green); }
+    .icon-red { background: var(--red-soft); color: var(--red); }
+    .icon-amber { background: var(--amber-soft); color: var(--amber); }
+    .stat-value { font-size: 24px; font-weight: 760; letter-spacing: -.7px; margin: 14px 0 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stat-foot { color: var(--muted); font-size: 11px; }
+    .stat-foot.positive { color: var(--green); }
+    .stat-foot.negative { color: var(--red); }
+    .grid-2 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(300px, .75fr); gap: 17px; margin-bottom: 17px; }
+    .grid-2.equal { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); min-width: 0; }
+    .panel-header { padding: 17px 19px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); gap: 12px; }
+    .panel-header h2 { margin: 0; font-size: 14px; letter-spacing: -.1px; }
+    .panel-header p { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
+    .panel-body { padding: 19px; }
+    .chart-wrap { height: 250px; padding: 10px 15px 16px; position: relative; }
+    #cashChart { width: 100%; height: 100%; display: block; }
+    .legend { display: flex; gap: 15px; color: var(--muted); font-size: 11px; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .blue-dot { background: var(--primary); }.red-dot { background: var(--red); }
+    .distribution-list { display: grid; gap: 14px; }
+    .distribution-row { display: grid; gap: 7px; }
+    .distribution-label { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; }
+    .distribution-label span:first-child { color: var(--muted); }
+    .progress { height: 7px; border-radius: 99px; background: #eef1f6; overflow: hidden; }
+    .progress > i { display: block; height: 100%; border-radius: inherit; background: var(--primary); }
+    .cash-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+    .cash-card { padding: 17px; border: 1px solid var(--border); border-radius: 14px; background: linear-gradient(145deg,#fff,#f8faff); }
+    .cash-card-top { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 12px; }
+    .status-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; display: inline-block; margin-right: 5px; }
+    .cash-card strong { font-size: 21px; display: block; margin: 12px 0 3px; }
+    .cash-card small { color: var(--muted); }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 650px; }
+    th { text-align: left; padding: 12px 19px; font-size: 10px; text-transform: uppercase; letter-spacing: .65px; color: #8993a6; font-weight: 700; background: #fbfcfe; border-bottom: 1px solid var(--border); }
+    td { padding: 13px 19px; border-bottom: 1px solid #f0f2f6; color: #334056; font-size: 12px; vertical-align: middle; }
+    tr:last-child td { border-bottom: 0; }
+    .desc-cell { display: flex; align-items: center; gap: 10px; min-width: 200px; }
+    .tx-icon { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: 13px; flex: 0 0 auto; }
+    .desc-cell b { display: block; color: var(--ink); font-size: 12px; margin-bottom: 2px; }
+    .desc-cell small { color: var(--muted); }
+    .amount { font-weight: 720; white-space: nowrap; }
+    .amount.in { color: var(--green); }.amount.out { color: var(--red); }
+    .badge { display: inline-flex; align-items: center; border-radius: 99px; padding: 4px 8px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+    .badge-in { color: var(--green); background: var(--green-soft); }.badge-out { color: var(--red); background: var(--red-soft); }.badge-neutral { color: var(--muted); background: #f0f2f6; }.badge-warn { color: var(--amber); background: var(--amber-soft); }
+    .filters { display: flex; align-items: center; gap: 9px; padding: 14px 19px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+    .field-inline, .field { display: grid; gap: 6px; }
+    .field-inline select, .field-inline input { height: 34px; }
+    label { color: #5b667b; font-size: 11px; font-weight: 650; }
+    input, select, textarea { color: var(--ink); background: #fff; border: 1px solid #dfe5ee; border-radius: 8px; outline: none; padding: 9px 10px; width: 100%; }
+    input:focus, select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(46,91,255,.09); }
+    textarea { resize: vertical; min-height: 75px; }
+    .empty { padding: 38px 20px; text-align: center; color: var(--muted); }
+    .empty .empty-icon { font-size: 26px; opacity: .55; margin-bottom: 8px; }
+    .empty b { display: block; color: var(--ink); margin-bottom: 4px; }
+    .summary-strip { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 11px; margin-bottom: 17px; }
+    .mini-stat { padding: 15px 16px; background: var(--panel); border: 1px solid var(--border); border-radius: 13px; }
+    .mini-stat span { color: var(--muted); font-size: 11px; display: block; margin-bottom: 8px; }.mini-stat strong { font-size: 17px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }.form-grid.three { grid-template-columns: repeat(3, minmax(0,1fr)); }.form-grid .full { grid-column: 1 / -1; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(11,18,34,.48); display: none; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+    .modal-backdrop.open { display: flex; }
+    .modal { width: min(620px, 100%); max-height: min(740px, 92vh); overflow-y: auto; background: #fff; border-radius: 18px; box-shadow: 0 24px 70px rgba(10,20,50,.23); animation: modalIn .2s ease; }
+    @keyframes modalIn { from { transform: translateY(10px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
+    .modal-head { display: flex; justify-content: space-between; padding: 19px 21px; border-bottom: 1px solid var(--border); align-items: center; }.modal-head h3 { margin: 0; font-size: 17px; }.close-modal { background: #f4f6f9; width: 28px; height: 28px; border-radius: 7px; color: var(--muted); font-size: 18px; }.modal-body { padding: 20px 21px; }.modal-foot { padding: 15px 21px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+    .type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; background: #f3f5f9; padding: 4px; border-radius: 10px; margin-bottom: 16px; }.type-toggle label { padding: 9px; border-radius: 7px; text-align: center; cursor: pointer; color: var(--muted); font-size: 12px; }.type-toggle input { display: none; }.type-toggle input:checked + span { display: block; background: #fff; color: var(--primary); box-shadow: 0 2px 7px rgba(30,40,70,.08); padding: 7px; border-radius: 6px; margin: -7px; }
+    .file-drop { border: 1px dashed #cfd7e7; background: #fafbfe; border-radius: 10px; padding: 14px; text-align: center; color: var(--muted); font-size: 11px; }.file-drop input { border: 0; padding: 6px; margin-top: 5px; font-size: 11px; }
+    .notice { padding: 12px 14px; border-radius: 10px; background: var(--primary-soft); color: #3850a1; font-size: 11px; line-height: 1.5; }.notice strong { color: var(--primary-dark); }
+    .register-tabs { display: flex; gap: 8px; margin-bottom: 16px; }.register-tab { border: 1px solid var(--border); padding: 9px 13px; background: #fff; border-radius: 9px; color: var(--muted); font-weight: 650; }.register-tab.active { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+    .register-detail { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); gap: 17px; }
+    .metric-line { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid #f0f2f6; font-size: 12px; }.metric-line:last-child { border-bottom: 0; }.metric-line span { color: var(--muted); }.metric-line strong { font-weight: 730; }
+    .closing-section-title { color: var(--red); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .7px; margin: 17px 0 9px; }.closing-section-title:first-child { margin-top: 0; }
+    .closing-income-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }.closing-income-grid .field { background: #fff8f8; padding: 10px; border: 1px solid #f5d9db; border-radius: 10px; }.closing-income-grid input { border-color: #f0c9cc; }
+    .closing-expense-list { display: grid; gap: 8px; }.closing-expense-row { display: grid; grid-template-columns: minmax(0,1fr) 115px 34px; gap: 7px; align-items: center; }.closing-expense-row input { min-width: 0; }.remove-expense { width: 34px; height: 34px; border-radius: 8px; background: var(--red-soft); color: var(--red); font-size: 16px; }.closing-total-card { display: grid; gap: 7px; background: #fff7f7; border: 1px solid #f2d2d4; border-radius: 10px; padding: 12px; margin-top: 11px; }.closing-total-card .metric-line { padding: 5px 0; }.closing-total-card .metric-line:last-child strong { color: var(--red); font-size: 16px; }.closing-helper { color: var(--muted); font-size: 10px; margin-top: 5px; line-height: 1.45; }
+    .btn-closing { background: var(--red); color: #fff; box-shadow: 0 6px 13px rgba(217,92,99,.2); }.btn-closing:hover { background: #b9434b; transform: translateY(-1px); }
+    .sales-kpis { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-bottom: 14px; }.sales-kpi { padding: 14px 15px; border: 1px solid var(--border); background: #fbfcff; border-radius: 12px; }.sales-kpi span { display:block; color:var(--muted); font-size:11px; margin-bottom:7px; }.sales-kpi strong { font-size:18px; }.sales-kpi small { display:block; color:var(--muted); font-size:10px; margin-top:4px; }.sales-kpi.up strong { color:var(--green); }.sales-kpi.down strong { color:var(--red); }.sales-history-table { max-height: 235px; overflow-y:auto; }.audit-action { color:var(--red); font-weight:700; }.trend-chip { display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:99px;font-size:10px;font-weight:700; }.trend-up { color:var(--green);background:var(--green-soft); }.trend-down { color:var(--red);background:var(--red-soft); }.trend-flat { color:var(--muted);background:#f0f2f6; }
+    @media (max-width: 760px) { .sales-kpis { grid-template-columns: 1fr; } }
+    .month-summary { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-bottom: 17px; }.month-summary .mini-stat strong { font-size: 20px; }
+    .report-hero { display: flex; justify-content: space-between; align-items: stretch; gap: 17px; margin-bottom: 17px; }.report-result { flex: 1; background: linear-gradient(135deg, #18274d, #2e5bff); color: #fff; border-radius: var(--radius); padding: 23px; position: relative; overflow: hidden; }.report-result:after { content: ''; position: absolute; width: 180px; height: 180px; border: 25px solid rgba(255,255,255,.09); border-radius: 50%; right: -65px; top: -75px; }.report-result p { margin: 0 0 8px; color: #c6d5ff; font-size: 12px; }.report-result h2 { margin: 0 0 8px; font-size: 31px; letter-spacing: -1px; }.report-result small { color: #d9e2ff; }.report-kpis { flex: 1.2; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }.report-kpis .mini-stat { box-shadow: var(--shadow); }
+    .settings-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, .8fr); gap: 17px; }.settings-stack { display: grid; gap: 17px; }.collaborator { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 0; border-bottom: 1px solid #f0f2f6; }.collaborator:last-child { border-bottom: 0; }.collab-left { display: flex; align-items: center; gap: 10px; }.collab-avatar { width: 32px; height: 32px; border-radius: 9px; background: #f0ebff; color: var(--purple); display: grid; place-items: center; font-weight: 750; }.collaborator b { display: block; font-size: 12px; }.collaborator small { color: var(--muted); }.code { letter-spacing: 2px; color: var(--primary); font-weight: 750; background: var(--primary-soft); padding: 5px 7px; border-radius: 6px; font-size: 11px; }
+    .attachment-link { color: var(--primary); text-decoration: none; font-size: 11px; }.attachment-link:hover { text-decoration: underline; }
+    .check { width: 16px; height: 16px; accent-color: var(--primary); }
+    .toast { position: fixed; right: 24px; bottom: 24px; background: #172033; color: #fff; padding: 12px 15px; border-radius: 10px; box-shadow: 0 10px 35px rgba(10,20,50,.22); z-index: 100; font-size: 12px; opacity: 0; pointer-events: none; transform: translateY(10px); transition: .25s; }.toast.show { opacity: 1; transform: none; }.toast.success { border-left: 3px solid var(--green); }.toast.error { border-left: 3px solid var(--red); }
+    .auth-overlay { position: fixed; inset: 0; background: linear-gradient(150deg,#0c1730,#1c2c52 60%,#2e5bff); display: flex; align-items: center; justify-content: center; z-index: 300; padding: 20px; }
+    .auth-overlay.hidden { display: none; }
+    .auth-card { background: #fff; border-radius: var(--radius); box-shadow: 0 30px 60px rgba(5,10,30,.35); padding: 32px 28px; width: 100%; max-width: 380px; }
+    .auth-brand { display: flex; align-items: center; gap: 11px; justify-content: center; padding-bottom: 22px; }
+    .auth-brand strong { display: block; font-size: 16px; letter-spacing: -.3px; }
+    .auth-brand small { color: var(--muted); font-size: 10px; letter-spacing: .4px; text-transform: uppercase; }
+    .auth-tabs { display: flex; gap: 6px; margin-bottom: 18px; background: var(--panel-soft); padding: 4px; border-radius: 10px; }
+    .auth-tab { flex: 1; padding: 9px; border-radius: 8px; background: transparent; color: var(--muted); font-weight: 650; font-size: 13px; }
+    .auth-tab.active { background: #fff; color: var(--primary); box-shadow: 0 2px 6px rgba(31,44,72,.1); }
+    #authForm .field { margin-bottom: 12px; }
+    .auth-error { padding: 10px 12px; border-radius: 9px; background: var(--red-soft); color: var(--red); font-size: 12px; margin-bottom: 12px; display: none; }
+    .auth-error.show { display: block; }
+    .auth-hint { color: var(--muted); font-size: 11px; text-align: center; margin: 16px 0 0; line-height: 1.5; }
+    .sync-chip { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--muted); padding-left: 10px; }
+    .sync-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: #b7bfcf; }
+    .sync-chip.synced .dot { background: var(--green); }
+    .sync-chip.saving .dot { background: var(--amber); }
+    .sync-chip.error .dot { background: var(--red); }
+    .mobile-menu { display: none; background: transparent; font-size: 22px; color: var(--ink); }
+    .print-only { display: none; }
+    @media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(2, 1fr); }.grid-2, .register-detail, .settings-grid { grid-template-columns: 1fr; }.report-hero { flex-direction: column; }.report-kpis { min-height: 145px; } }
+    @media (max-width: 760px) { :root { --sidebar: 0px; }.sidebar { transform: translateX(-100%); transition: .25s; width: 248px; }.sidebar.open { transform: none; }.main-wrap { width: 100%; }.topbar { padding: 0 16px; height: 65px; }.mobile-menu { display: block; }.search-wrap { display: none; }.user-chip { display: none; }.content { padding: 22px 15px 35px; }.page-heading { flex-direction: column; }.heading-actions { justify-content: flex-start; }.stats-grid, .summary-strip, .month-summary { grid-template-columns: repeat(2, 1fr); }.cash-grid { grid-template-columns: 1fr; }.form-grid, .form-grid.three { grid-template-columns: 1fr; }.form-grid .full { grid-column: auto; }.topbar-actions .btn-secondary { display: none; }.topbar-actions #pasteAdd { display: inline-flex; padding: 0 10px; } }
+    @media print { .sidebar, .topbar, .heading-actions, .filters, .btn, .nav, .modal-backdrop { display: none !important; }.main-wrap { width: 100%; margin: 0; }.content { padding: 0; }.page { display: none !important; }.page#page-reports { display: block !important; }.panel, .stat-card { box-shadow: none; }.print-only { display: block; } }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand"><div class="brand-mark">F</div><div><strong>Fluxo</strong><small>Controle financeiro</small></div></div>
+      <div class="nav-label">Gestão</div>
+      <nav class="nav">
+        <button class="active" data-page="dashboard"><span class="nav-icon">⌂</span>Visão geral</button>
+        <button data-page="movements"><span class="nav-icon">↕</span>Lançamentos</button>
+        <button data-page="register"><span class="nav-icon">▣</span>Caixas</button>
+        <button data-page="reconciliation"><span class="nav-icon">✓</span>Conciliação</button>
+        <button data-page="reports"><span class="nav-icon">◒</span>Relatórios</button>
+      </nav>
+      <div class="nav-label">Sistema</div>
+      <nav class="nav"><button data-page="settings"><span class="nav-icon">⚙</span>Configurações</button></nav>
+      <div class="sidebar-bottom"><b id="sidebarBusinessName">Meu negócio</b><br><span>Dados salvos neste dispositivo.</span><br><span>Faça backups periódicos.</span></div>
+    </aside>
+    <div class="main-wrap">
+      <header class="topbar">
+        <div class="topbar-left"><button class="mobile-menu" id="mobileMenu">☰</button><div class="page-kicker">Painel financeiro / <b id="topPageName">Visão geral</b></div><div class="search-wrap"><span>⌕</span><input class="search" id="globalSearch" placeholder="Buscar lançamento..." /></div></div>
+        <div class="topbar-actions"><input type="month" class="month-picker" id="globalMonth" /><button class="btn btn-secondary" id="pasteAdd" title="Cole o texto de uma nota/recibo e deixe a IA preencher o lançamento">🧾 Colar nota</button><button class="btn btn-primary" id="quickAdd">＋ Novo lançamento</button><div class="sync-chip" id="syncChip"><span class="dot"></span><span id="syncChipLabel">—</span></div><div class="user-chip"><div class="avatar" id="userAvatar">AD</div><div><strong>Administrador</strong><small>Gestão local</small></div></div></div>
+      </header>
+      <main class="content">
+        <section class="page active" id="page-dashboard">
+          <div class="page-heading"><div><h1>Visão geral</h1><p id="dashboardSubtitle">Acompanhe o pulso financeiro do seu negócio.</p></div><div class="heading-actions"><button class="btn btn-secondary" data-page="reports">◒ Ver relatório</button><button class="btn btn-primary" id="dashboardAdd">＋ Registrar movimento</button></div></div>
+          <div class="stats-grid" id="statsGrid"></div>
+          <div class="grid-2"><div class="panel"><div class="panel-header"><div><h2>Entradas x saídas</h2><p>Movimentação diária do mês selecionado</p></div><div class="legend"><span><i class="blue-dot"></i>Entradas</span><span><i class="red-dot"></i>Saídas</span></div></div><div class="chart-wrap"><canvas id="cashChart"></canvas></div></div><div class="panel"><div class="panel-header"><div><h2>Saídas por categoria</h2><p>Onde seu dinheiro está sendo utilizado</p></div></div><div class="panel-body"><div class="distribution-list" id="categoryDistribution"></div></div></div></div>
+          <div class="panel" style="margin-bottom:17px"><div class="panel-header"><div><h2>Posição dos caixas</h2><p>Saldo disponível por frente de caixa</p></div><button class="btn btn-ghost btn-sm" data-page="register">Gerenciar caixas →</button></div><div class="panel-body"><div class="cash-grid" id="cashCards"></div></div></div>
+          <div class="panel" style="margin-bottom:17px"><div class="panel-header"><div><h2>Dashboard de vendas por dia</h2><p>Total de vendas informado nos fechamentos do período selecionado</p><span id="salesTrendBadge" class="trend-chip trend-flat">→ Sem histórico suficiente</span></div><button class="btn btn-ghost btn-sm" data-page="register">Registrar venda →</button></div><div class="panel-body"><div class="sales-kpis" id="salesKpis"></div><div class="chart-wrap" style="height:245px"><canvas id="salesChart"></canvas></div><div class="sales-history-table" id="salesHistoryTable"></div></div></div>
+          <div class="panel"><div class="panel-header"><div><h2>Últimos lançamentos</h2><p>As movimentações mais recentes do período</p></div><button class="btn btn-ghost btn-sm" data-page="movements">Ver todos →</button></div><div class="table-wrap" id="recentTable"></div></div>
+        </section>
+
+        <section class="page" id="page-movements">
+          <div class="page-heading"><div><h1>Lançamentos</h1><p>Registre e acompanhe cada entrada, saída e documento.</p></div><div class="heading-actions"><button class="btn btn-secondary" id="exportMovements">⇩ Exportar CSV</button><button class="btn btn-primary" id="movementAdd">＋ Novo lançamento</button></div></div>
+          <div class="panel"><div class="filters"><div class="field-inline"><label>Período</label><input type="month" id="movementMonth" /></div><div class="field-inline"><label>Tipo</label><select id="movementType"><option value="all">Todos os tipos</option><option value="entrada">Entradas</option><option value="saida">Saídas</option></select></div><div class="field-inline"><label>Forma</label><select id="movementMethod"><option value="all">Todas as formas</option><option value="dinheiro">Dinheiro</option><option value="pix">Pix</option><option value="cartao">Cartão</option><option value="transferencia">Transferência</option><option value="outro">Outro</option></select></div><div class="field-inline" style="flex:1;min-width:180px"><label>Busca</label><input id="movementSearch" placeholder="Descrição, categoria ou colaborador" /></div><button class="btn btn-secondary btn-sm" id="clearMovementFilters" style="margin-top:17px">Limpar filtros</button></div><div class="table-wrap" id="movementsTable"></div></div>
+        </section>
+
+        <section class="page" id="page-register">
+          <div class="page-heading"><div><h1>Caixas</h1><p>Controle o fundo, a operação e o fechamento de cada caixa.</p></div><div class="heading-actions"><button class="btn btn-secondary" id="openingAdd">＋ Registrar fundo de caixa</button><button class="btn btn-primary" id="closingAdd">✓ Fechar caixa</button></div></div>
+          <div class="register-tabs" id="registerTabs"><button class="register-tab active" data-register="1">Caixa 01</button><button class="register-tab" data-register="2">Caixa 02</button></div>
+          <div class="register-detail"><div class="panel"><div class="panel-header"><div><h2 id="registerTitle">Caixa 01</h2><p>Visão consolidada das operações deste caixa</p></div><span class="badge badge-in"><i class="status-dot"></i>Disponível</span></div><div class="panel-body"><div id="registerMetrics"></div></div></div><div class="panel"><div class="panel-header"><div><h2 class="closing-section-title" style="margin:0">Fechamento detalhado</h2><p>Informe os totais recebidos e as despesas do turno</p></div><span class="badge badge-out">Conferência</span></div><div class="panel-body"><form id="closingForm"><div class="field"><label>Data do fechamento</label><input type="date" id="closingDate" required /></div><div class="closing-section-title">Entrada</div><div class="closing-income-grid"><div class="field"><label>Total Pix (R$)</label><input type="number" id="closingPix" class="closing-income" step="0.01" min="0" placeholder="0,00" /></div><div class="field"><label>Total débito (R$)</label><input type="number" id="closingDebit" class="closing-income" step="0.01" min="0" placeholder="0,00" /></div><div class="field"><label>Total crédito (R$)</label><input type="number" id="closingCredit" class="closing-income" step="0.01" min="0" placeholder="0,00" /></div><div class="field"><label>Total dinheiro (R$)</label><input type="number" id="closingCash" class="closing-income" step="0.01" min="0" placeholder="0,00" /></div></div><div class="closing-total-card"><div class="metric-line"><span>Total de entradas</span><strong id="closingEntryTotal">R$ 0,00</strong></div></div><div class="closing-section-title">Saída</div><div class="closing-expense-list" id="closingExpenseList"></div><button type="button" class="btn btn-secondary btn-sm" id="addClosingExpense" style="margin-top:9px">＋ Adicionar despesa</button><div class="closing-total-card"><div class="metric-line"><span>Total de saídas</span><strong id="closingExitTotal">R$ 0,00</strong></div><div class="metric-line"><span>Saldo esperado do caixa</span><strong id="closingExpectedTotal">R$ 0,00</strong></div></div><div class="field" style="margin-top:12px"><label>Total contado em dinheiro (R$)</label><input type="number" id="closingActual" step="0.01" min="0" placeholder="0,00" required /></div><div class="notice" style="margin-top:13px" id="expectedNotice">Informe os totais de entrada, as despesas e o valor contado para calcular automaticamente.</div><div class="closing-helper">O saldo esperado em dinheiro considera o fundo de caixa + total dinheiro − despesas informadas. Pix, débito e crédito ficam registrados na conferência, mas não entram no dinheiro físico.</div><div class="field" style="margin-top:12px"><label>Colaborador responsável</label><select id="closingCollaborator" required></select></div><div class="field" style="margin-top:12px"><label>Código de fechamento</label><input type="password" id="closingCode" inputmode="numeric" maxlength="8" placeholder="Código do colaborador" required /></div><div class="field" style="margin-top:12px"><label>Observação (opcional)</label><textarea id="closingNotes" placeholder="Ex.: sangria, diferença justificada..."></textarea></div><button class="btn btn-closing" type="submit" style="width:100%;margin-top:13px">Confirmar fechamento</button></form></div></div></div>
+          <div class="panel" style="margin-top:17px"><div class="panel-header"><div><h2>Histórico de fechamentos</h2><p>Registro de conferências e diferenças identificadas</p></div></div><div class="table-wrap" id="closingsTable"></div></div>
+          <div class="panel" style="margin-top:17px"><div class="panel-header"><div><h2>Fundos de caixa registrados</h2><p>Valores iniciais entregues para operação</p></div></div><div class="table-wrap" id="openingsTable"></div></div>
+          <div class="panel" style="margin-top:17px"><div class="panel-header"><div><h2>Histórico de alterações</h2><p>Auditoria de fechamentos apagados ou alterados</p></div></div><div class="table-wrap" id="auditTable"></div></div>
+        </section>
+
+        <section class="page" id="page-reconciliation">
+          <div class="page-heading"><div><h1>Conciliação</h1><p>Confirme se cada movimentação bate com o extrato, comprovante ou nota.</p></div><div class="heading-actions"><button class="btn btn-secondary" id="reconcileAll">✓ Marcar filtrados como conferidos</button><button class="btn btn-primary" id="printReconciliation">⎙ Imprimir</button></div></div>
+          <div class="month-summary" id="reconciliationSummary"></div>
+          <div class="panel"><div class="filters"><div class="field-inline"><label>Mês de referência</label><input type="month" id="reconciliationMonth" /></div><div class="field-inline"><label>Status</label><select id="reconciliationStatus"><option value="all">Todos</option><option value="pending">Pendentes</option><option value="done">Conferidos</option></select></div><div class="notice" style="margin-left:auto">Conferir: nota fiscal, comprovante, extrato e valor.</div></div><div class="table-wrap" id="reconciliationTable"></div></div>
+        </section>
+
+        <section class="page" id="page-reports">
+          <div class="page-heading"><div><h1>Relatórios financeiros</h1><p>Fechamento mensal estruturado para decidir com segurança.</p></div><div class="heading-actions"><button class="btn btn-secondary" id="printReport">⎙ Imprimir relatório</button><button class="btn btn-primary" id="exportReport">⇩ Exportar dados</button></div></div>
+          <div class="report-hero"><div class="report-result"><p>Resultado líquido do mês</p><h2 id="reportResult">R$ 0,00</h2><small id="reportMargin">Margem líquida: 0,0%</small></div><div class="report-kpis" id="reportKpis"></div></div>
+          <div class="grid-2 equal"><div class="panel"><div class="panel-header"><div><h2>Resumo do período</h2><p>Indicadores essenciais para o fechamento</p></div></div><div class="panel-body" id="reportSummary"></div></div><div class="panel"><div class="panel-header"><div><h2>Despesas por categoria</h2><p>Distribuição das saídas do período</p></div></div><div class="panel-body"><div class="distribution-list" id="reportCategories"></div></div></div></div>
+          <div class="panel" style="margin-top:17px"><div class="panel-header"><div><h2>Demonstrativo mensal</h2><p>Valores calculados a partir dos lançamentos registrados</p></div></div><div class="table-wrap" id="monthlyStatement"></div></div>
+        </section>
+
+        <section class="page" id="page-settings">
+          <div class="page-heading"><div><h1>Configurações</h1><p>Personalize seu negócio e proteja uma cópia dos seus dados.</p></div></div>
+          <div class="settings-grid"><div class="settings-stack"><div class="panel"><div class="panel-header"><div><h2>Sua conta</h2><p>Sincronização com o servidor.</p></div></div><div class="panel-body"><div class="metric-line"><span>E-mail</span><strong id="accountEmail">—</strong></div><div class="metric-line"><span>Última sincronização</span><strong id="accountSync">—</strong></div><button class="btn btn-danger" id="logoutBtn" style="margin-top:12px">Sair da conta</button></div></div><div class="panel"><div class="panel-header"><div><h2>Dados do negócio</h2><p>Estas informações aparecem nos relatórios.</p></div></div><div class="panel-body"><form id="businessForm"><div class="form-grid"><div class="field"><label>Nome do negócio</label><input id="businessName" required placeholder="Ex.: Mercado da Praça" /></div><div class="field"><label>CNPJ ou CPF (opcional)</label><input id="businessDoc" placeholder="00.000.000/0000-00" /></div><div class="field"><label>Meta mensal de entradas (R$)</label><input type="number" id="businessGoal" min="0" step="0.01" placeholder="0,00" /></div><div class="field"><label>Responsável</label><input id="businessOwner" placeholder="Nome do responsável" /></div></div><button class="btn btn-primary" type="submit" style="margin-top:16px">Salvar dados</button></form></div></div><div class="panel"><div class="panel-header"><div><h2>Colaboradores e códigos</h2><p>O código é usado para validar o fechamento do caixa.</p></div><button class="btn btn-secondary btn-sm" id="collaboratorAdd">＋ Adicionar</button></div><div class="panel-body" id="collaboratorsList"></div></div></div><div class="settings-stack"><div class="panel"><div class="panel-header"><div><h2>Backup local</h2><p>Exporte os dados antes de trocar de dispositivo.</p></div></div><div class="panel-body"><div class="notice"><strong>Privacidade:</strong> tudo fica salvo no armazenamento local deste navegador. Anexos também entram no backup.</div><div style="display:grid;gap:9px;margin-top:14px"><button class="btn btn-primary" id="backupExport">⇩ Baixar backup completo</button><label class="btn btn-secondary" for="backupImport">⇧ Restaurar backup JSON<input type="file" id="backupImport" accept="application/json" style="display:none" /></label><button class="btn btn-danger" id="clearAllData">Limpar todos os dados</button></div></div></div><div class="panel"><div class="panel-header"><div><h2>Como interpretar</h2><p>Critérios usados no painel</p></div></div><div class="panel-body" style="color:var(--muted);font-size:12px;line-height:1.7"><p style="margin-top:0"><b style="color:var(--ink)">Capital de giro:</b> saldo acumulado de entradas, saídas e fundos de caixa registrados. Não substitui um balanço contábil.</p><p><b style="color:var(--ink)">Resultado líquido:</b> entradas menos saídas no mês selecionado.</p><p style="margin-bottom:0"><b style="color:var(--ink)">Conciliação:</b> marque um lançamento após validar o documento, valor, forma de pagamento e extrato.</p></div></div></div></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="movementModal"><div class="modal"><div class="modal-head"><h3>Novo lançamento</h3><button class="close-modal" data-close="movementModal">×</button></div><form id="movementForm"><div class="modal-body"><div class="type-toggle"><label><input type="radio" name="txType" value="entrada" checked /><span>＋ Entrada</span></label><label><input type="radio" name="txType" value="saida" /><span>− Saída</span></label></div><div class="form-grid"><div class="field full"><label>Descrição *</label><input id="txDescription" required placeholder="Ex.: Venda balcão, compra de mercadoria..." /></div><div class="field"><label>Valor (R$) *</label><input id="txAmount" type="number" min="0.01" step="0.01" required placeholder="0,00" /></div><div class="field"><label>Data *</label><input id="txDate" type="date" required /></div><div class="field"><label>Categoria *</label><select id="txCategory" required></select></div><div class="field"><label>Forma de pagamento *</label><select id="txMethod" required><option value="dinheiro">Dinheiro</option><option value="pix">Pix</option><option value="cartao">Cartão</option><option value="transferencia">Transferência</option><option value="outro">Outro</option></select></div><div class="field"><label>Caixa responsável</label><select id="txRegister"><option value="1">Caixa 01</option><option value="2">Caixa 02</option><option value="none">Não se aplica</option></select></div><div class="field"><label>Colaborador</label><select id="txCollaborator"></select></div><div class="field full"><label>Observações</label><textarea id="txNotes" placeholder="Detalhes úteis para a conciliação..."></textarea></div><div class="field full"><label>Nota fiscal, imagem ou PDF</label><div class="file-drop">Anexe o documento do movimento (até 5 MB).<input id="txAttachment" type="file" accept="image/*,.pdf,application/pdf" /></div></div></div></div><div class="modal-foot"><button type="button" class="btn btn-secondary" data-close="movementModal">Cancelar</button><button class="btn btn-primary" type="submit">Salvar lançamento</button></div></form></div></div>
+  <div class="modal-backdrop" id="openingModal"><div class="modal"><div class="modal-head"><h3>Registrar fundo de caixa</h3><button class="close-modal" data-close="openingModal">×</button></div><form id="openingForm"><div class="modal-body"><div class="notice">O fundo de caixa é o valor inicial disponível para troco e operação. Ele não entra como receita.</div><div class="form-grid" style="margin-top:15px"><div class="field"><label>Caixa</label><select id="openingRegister"><option value="1">Caixa 01</option><option value="2">Caixa 02</option></select></div><div class="field"><label>Data</label><input type="date" id="openingDate" required /></div><div class="field"><label>Valor do fundo (R$)</label><input type="number" id="openingAmount" min="0" step="0.01" required /></div><div class="field"><label>Colaborador</label><select id="openingCollaborator"></select></div><div class="field full"><label>Observação</label><textarea id="openingNotes" placeholder="Ex.: fundo entregue no início do turno"></textarea></div></div></div><div class="modal-foot"><button type="button" class="btn btn-secondary" data-close="openingModal">Cancelar</button><button class="btn btn-primary" type="submit">Salvar fundo</button></div></form></div></div>
+  <div class="modal-backdrop" id="collaboratorModal"><div class="modal"><div class="modal-head"><h3>Adicionar colaborador</h3><button class="close-modal" data-close="collaboratorModal">×</button></div><form id="collaboratorForm"><div class="modal-body"><div class="notice">O código deve ser compartilhado apenas com a pessoa responsável pelo fechamento.</div><div class="form-grid" style="margin-top:15px"><div class="field full"><label>Nome completo</label><input id="collabName" required placeholder="Ex.: Ana Souza" /></div><div class="field"><label>Função</label><input id="collabRole" placeholder="Operador(a) de caixa" /></div><div class="field"><label>Código numérico</label><input id="collabCode" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" required placeholder="4 a 8 dígitos" /></div></div></div><div class="modal-foot"><button type="button" class="btn btn-secondary" data-close="collaboratorModal">Cancelar</button><button class="btn btn-primary" type="submit">Adicionar colaborador</button></div></form></div></div>
+  <div class="modal-backdrop" id="pasteModal"><div class="modal"><div class="modal-head"><h3>Colar nota</h3><button class="close-modal" data-close="pasteModal">×</button></div><div class="modal-body"><div class="notice">Bata a foto da nota com o app de IA/OCR do seu celular, copie o texto transcrito e cole abaixo. A IA preenche o lançamento para você só revisar e salvar.</div><div class="field full" style="margin-top:14px"><label>Texto da nota</label><textarea id="pasteText" rows="8" placeholder="Cole aqui o texto transcrito da nota ou recibo..."></textarea></div><div class="auth-error" id="pasteError"></div></div><div class="modal-foot"><button type="button" class="btn btn-secondary" data-close="pasteModal">Cancelar</button><button type="button" class="btn btn-primary" id="pasteInterpret">✨ Interpretar com IA</button></div></div></div>
+  <div class="toast" id="toast"></div>
+
+  <div class="auth-overlay" id="authOverlay">
+    <div class="auth-card">
+      <div class="auth-brand"><div class="brand-mark">F</div><div><strong>Fluxo</strong><small>Controle financeiro</small></div></div>
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" data-auth-mode="login">Entrar</button>
+        <button type="button" class="auth-tab" data-auth-mode="register">Criar conta</button>
+      </div>
+      <form id="authForm">
+        <div class="field full" id="authBusinessNameField" style="display:none">
+          <label>Nome do negócio</label>
+          <input id="authBusinessName" placeholder="Ex.: Mercado da Praça" />
+        </div>
+        <div class="field full">
+          <label>E-mail</label>
+          <input id="authEmail" type="email" required placeholder="voce@seunegocio.com" autocomplete="username" />
+        </div>
+        <div class="field full">
+          <label>Senha</label>
+          <input id="authPassword" type="password" required minlength="8" placeholder="Mínimo 8 caracteres" autocomplete="current-password" />
+        </div>
+        <div class="auth-error" id="authError"></div>
+        <button class="btn btn-primary" type="submit" id="authSubmit" style="width:100%">Entrar</button>
+      </form>
+      <p class="auth-hint">Seus lançamentos ficam guardados em um banco de dados, sincronizados entre dispositivos.</p>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+      const STORAGE_KEY = 'fluxo-controle-caixa-v1';
+      const AUTH_TOKEN_KEY = 'fluxo-auth-token-v1';
+      const AUTH_EMAIL_KEY = 'fluxo-auth-email-v1';
+      let authToken = localStorage.getItem(AUTH_TOKEN_KEY) || null;
+      let syncTimer = null;
+      let lastSyncedAt = null;
+      const categories = {
+        entrada: ['Vendas', 'Serviços', 'Recebimento de cliente', 'Aporte', 'Outras entradas'],
+        saida: ['Mercadoria', 'Fornecedores', 'Aluguel', 'Folha e pró-labore', 'Impostos', 'Marketing', 'Taxas bancárias', 'Contas e serviços', 'Manutenção', 'Outras saídas']
+      };
+      const defaultState = () => ({
+        business: { name: 'Meu negócio', doc: '', goal: 0, owner: 'Administrador' },
+        collaborators: [{ id: uid(), name: 'Administrador', role: 'Gestor', code: '1234' }],
+        transactions: [], openings: [], closings: [], auditLog: [],
+        registers: { '1': { name: 'Caixa 01' }, '2': { name: 'Caixa 02' } },
+        currentMonth: monthKey(new Date()), currentPage: 'dashboard'
+      });
+      let state = loadState();
+      let activeRegister = '1';
+      let toastTimer;
+
+      function uid() { return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8); }
+      function qs(sel) { return document.querySelector(sel); }
+      function qsa(sel) { return [...document.querySelectorAll(sel)]; }
+      function todayISO() { const d = new Date(); const offset = d.getTimezoneOffset(); return new Date(d.getTime() - offset * 60000).toISOString().slice(0,10); }
+      function monthKey(value) { const d = value instanceof Date ? value : new Date(value + 'T12:00:00'); return d.toISOString().slice(0,7); }
+      function monthLabel(m) { if (!m) return ''; const [y, mo] = m.split('-'); return new Date(Number(y), Number(mo)-1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }); }
+      function fmtBRL(n) { return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(Number(n || 0)); }
+      function fmtNum(n) { return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(Number(n || 0)); }
+      function fmtDate(s) { if (!s) return '—'; return new Date(s + 'T12:00:00').toLocaleDateString('pt-BR'); }
+      function esc(v) { return String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+      function initial(name) { return (name || 'AD').split(' ').map(x => x[0]).join('').slice(0,2).toUpperCase(); }
+      function loadState() { try { const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY)); if (!parsed) return defaultState(); const base = defaultState(); return { ...base, ...parsed, business: { ...base.business, ...(parsed.business || {}) }, registers: { ...base.registers, ...(parsed.registers || {}) }, collaborators: parsed.collaborators?.length ? parsed.collaborators : base.collaborators, transactions: parsed.transactions || [], openings: parsed.openings || [], closings: parsed.closings || [], auditLog: parsed.auditLog || [] }; } catch (e) { return defaultState(); } }
+      function saveState() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        if (!authToken) return;
+        setSyncStatus('saving');
+        clearTimeout(syncTimer);
+        syncTimer = setTimeout(syncStateToServer, 900);
+      }
+
+      async function apiFetch(path, opts = {}) {
+        const res = await fetch(path, {
+          ...opts,
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authToken ? { Authorization: 'Bearer ' + authToken } : {}),
+            ...(opts.headers || {}),
+          },
+        });
+        let data = null;
+        try { data = await res.json(); } catch (e) { /* resposta vazia */ }
+        if (!res.ok) throw new Error((data && data.error) || 'Erro na comunicação com o servidor.');
+        return data;
+      }
+
+      function setSyncStatus(status) {
+        const chip = qs('#syncChip'); const label = qs('#syncChipLabel');
+        if (!chip || !label) return;
+        chip.className = 'sync-chip ' + status;
+        const labels = { saving: 'Salvando...', synced: 'Sincronizado', error: 'Falha ao sincronizar' };
+        label.textContent = labels[status] || '—';
+        if (status === 'synced') {
+          lastSyncedAt = new Date();
+          const acc = qs('#accountSync'); if (acc) acc.textContent = lastSyncedAt.toLocaleTimeString('pt-BR');
+        }
+      }
+
+      async function syncStateToServer() {
+        try {
+          await apiFetch('/api/state', { method: 'PUT', body: JSON.stringify({ state }) });
+          setSyncStatus('synced');
+        } catch (err) {
+          setSyncStatus('error');
+          notify('Não sincronizado: ' + err.message + ' (os dados continuam salvos neste navegador)', 'error');
+        }
+      }
+      function notify(message, type='success') { const el = qs('#toast'); el.textContent = message; el.className = 'toast show ' + type; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.className = 'toast', 3200); }
+      function setValue(id, value) { const el = qs('#' + id); if (el) el.value = value ?? ''; }
+      function sum(items, selector = x => x) { return items.reduce((a, x) => a + Number(selector(x) || 0), 0); }
+      function periodTx(month = state.currentMonth) { return state.transactions.filter(t => monthKey(t.date) === month); }
+      function periodOpenings(month = state.currentMonth) { return state.openings.filter(o => monthKey(o.date) === month); }
+      function periodClosings(month = state.currentMonth) { return state.closings.filter(c => monthKey(c.date) === month); }
+      function totals(month = state.currentMonth) { const tx = periodTx(month); const entries = sum(tx.filter(t => t.type === 'entrada'), t => t.amount); const exits = sum(tx.filter(t => t.type === 'saida'), t => t.amount); const funds = sum(periodOpenings(month), x => x.amount); return { tx, entries, exits, result: entries - exits, funds, capital: entries - exits + funds }; }
+      function closingSalesValue(c) { return Number(c.entryTotal ?? ((c.pix || 0) + (c.debit || 0) + (c.credit || 0) + (c.cash || 0))); }
+      function salesByDay(month = state.currentMonth) { const days = new Date(Number(month.slice(0,4)), Number(month.slice(5)), 0).getDate(); return Array.from({length: days}, (_, i) => { const day = String(i + 1).padStart(2, '0'), date = `${month}-${day}`; return { day: i + 1, date, value: sum(state.closings.filter(c => c.date === date), closingSalesValue) }; }); }
+      function salesPeriodStats(month = state.currentMonth) { const daily = salesByDay(month), active = daily.filter(d => d.value > 0); if (!active.length) return { daily, total: 0, bestDay: null, bestPeriod: null, trend: 0, avgFirst: 0, avgSecond: 0 }; const first = daily.filter(d => d.day <= 15), second = daily.filter(d => d.day > 15); const avgFirst = sum(first, d => d.value) / Math.max(1, first.filter(d => d.value > 0).length), avgSecond = sum(second, d => d.value) / Math.max(1, second.filter(d => d.value > 0).length); const periods = [{ label: 'Dias 01–07', value: sum(daily.filter(d => d.day <= 7), d => d.value) }, { label: 'Dias 08–14', value: sum(daily.filter(d => d.day >= 8 && d.day <= 14), d => d.value) }, { label: 'Dias 15–21', value: sum(daily.filter(d => d.day >= 15 && d.day <= 21), d => d.value) }, { label: 'Dias 22–fim do mês', value: sum(daily.filter(d => d.day >= 22), d => d.value) }]; return { daily, total: sum(daily, d => d.value), bestDay: active.reduce((best, d) => d.value > best.value ? d : best, active[0]), bestPeriod: periods.reduce((best, p) => p.value > best.value ? p : best, periods[0]), trend: avgFirst ? ((avgSecond - avgFirst) / avgFirst) * 100 : 0, avgFirst, avgSecond }; }
+      function txLabel(t) { const method = { dinheiro:'Dinheiro', pix:'Pix', cartao:'Cartão', transferencia:'Transferência', outro:'Outro' }; return method[t.paymentMethod] || 'Outro'; }
+      function collaboratorName(id) { return state.collaborators.find(c => c.id === id)?.name || 'Não informado'; }
+      function registerName(id) { return state.registers[id]?.name || (id === 'none' ? 'Não se aplica' : 'Caixa ' + id); }
+      function getExpectedCash(date, register) { const funds = sum(state.openings.filter(o => o.date === date && o.register === register), x => x.amount); const tx = state.transactions.filter(t => t.date === date && t.register === register && t.paymentMethod === 'dinheiro'); return funds + sum(tx.filter(t => t.type === 'entrada'), x => x.amount) - sum(tx.filter(t => t.type === 'saida'), x => x.amount); }
+      function getClosingExpenses() { return [...document.querySelectorAll('.closing-expense-row')].map(row => ({ description: row.querySelector('.expense-description').value.trim(), amount: Number(row.querySelector('.expense-amount').value || 0) })).filter(item => item.description || item.amount > 0); }
+      function getClosingDraft() { const pix = Number(qs('#closingPix')?.value || 0), debit = Number(qs('#closingDebit')?.value || 0), credit = Number(qs('#closingCredit')?.value || 0), cash = Number(qs('#closingCash')?.value || 0); const expenses = getClosingExpenses(); const exitTotal = sum(expenses, item => item.amount); const entryTotal = pix + debit + credit + cash; const date = qs('#closingDate')?.value || todayISO(); const funds = sum(state.openings.filter(o => o.date === date && o.register === activeRegister), x => x.amount); return { pix, debit, credit, cash, expenses, exitTotal, entryTotal, funds, expected: funds + cash - exitTotal }; }
+      function renderClosingExpenses(expenses = [{}]) { const list = qs('#closingExpenseList'); if (!list) return; list.innerHTML = expenses.length ? expenses.map(item => `<div class="closing-expense-row"><input class="expense-description" placeholder="Ex.: copo descartável" value="${esc(item.description || '')}" /><input class="expense-amount" type="number" min="0" step="0.01" placeholder="0,00" value="${item.amount || ''}" /><button type="button" class="remove-expense" title="Remover despesa">×</button></div>`).join('') : ''; updateExpectedNotice(qs('#closingDate')?.value || todayISO()); }
+      function updateClosingTotals() { const draft = getClosingDraft(); if (qs('#closingEntryTotal')) qs('#closingEntryTotal').textContent = fmtBRL(draft.entryTotal); if (qs('#closingExitTotal')) qs('#closingExitTotal').textContent = fmtBRL(draft.exitTotal); if (qs('#closingExpectedTotal')) qs('#closingExpectedTotal').textContent = fmtBRL(draft.expected); return draft; }
+      function showModal(id) { qs('#' + id).classList.add('open'); }
+      function closeModal(id) { qs('#' + id).classList.remove('open'); }
+      function populateCollaborators() { const opts = '<option value="">Não informado</option>' + state.collaborators.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join(''); ['txCollaborator','openingCollaborator','closingCollaborator'].forEach(id => { const el = qs('#' + id); if (el) { const prev = el.value; el.innerHTML = opts; if ([...el.options].some(o => o.value === prev)) el.value = prev; } }); }
+      function populateCategories() { const type = qs('input[name="txType"]:checked')?.value || 'entrada'; qs('#txCategory').innerHTML = categories[type].map(c => `<option>${esc(c)}</option>`).join(''); }
+      function setDefaults() { state.currentMonth = state.currentMonth || monthKey(new Date()); setValue('globalMonth', state.currentMonth); setValue('movementMonth', state.currentMonth); setValue('reconciliationMonth', state.currentMonth); setValue('txDate', todayISO()); setValue('openingDate', todayISO()); setValue('closingDate', todayISO()); setValue('businessName', state.business.name); setValue('businessDoc', state.business.doc); setValue('businessGoal', state.business.goal); setValue('businessOwner', state.business.owner); qs('#sidebarBusinessName').textContent = state.business.name || 'Meu negócio'; qs('#userAvatar').textContent = initial(state.business.owner || 'Administrador'); populateCollaborators(); populateCategories(); }
+      function openMovement() { setValue('txDate', todayISO()); qs('#movementForm').reset(); setValue('txDate', todayISO()); qs('input[name="txType"][value="entrada"]').checked = true; populateCategories(); populateCollaborators(); showModal('movementModal'); setTimeout(() => qs('#txDescription').focus(), 30); }
+      function renderPageMeta() { const names = {dashboard:'Visão geral', movements:'Lançamentos', register:'Caixas', reconciliation:'Conciliação', reports:'Relatórios', settings:'Configurações'}; qs('#topPageName').textContent = names[state.currentPage] || 'Visão geral'; qsa('.nav button').forEach(b => b.classList.toggle('active', b.dataset.page === state.currentPage)); qsa('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + state.currentPage)); }
+      function navigate(page) { state.currentPage = page; saveState(); renderPageMeta(); updateAll(); if (window.innerWidth < 760) qs('#sidebar').classList.remove('open'); }
+      function updateAll() { setDefaults(); renderDashboard(); renderMovements(); renderRegister(); renderReconciliation(); renderReports(); renderSettings(); renderPageMeta(); }
+
+      function renderDashboard() {
+        const t = totals(); const tx = t.tx; const count = tx.length; const prevMonth = new Date(Number(state.currentMonth.slice(0,4)), Number(state.currentMonth.slice(5))-2, 1); const previous = totals(monthKey(prevMonth));
+        qs('#dashboardSubtitle').textContent = `${monthLabel(state.currentMonth)} · ${count} ${count === 1 ? 'movimento registrado' : 'movimentos registrados'}`;
+        const resultClass = t.result >= 0 ? 'positive' : 'negative';
+        qs('#statsGrid').innerHTML = `<div class="stat-card"><div class="stat-top"><span>Total de entradas</span><span class="stat-icon icon-green">↗</span></div><div class="stat-value">${fmtBRL(t.entries)}</div><div class="stat-foot positive">${tx.filter(x=>x.type==='entrada').length} recebimentos no mês</div></div><div class="stat-card"><div class="stat-top"><span>Total de saídas</span><span class="stat-icon icon-red">↘</span></div><div class="stat-value">${fmtBRL(t.exits)}</div><div class="stat-foot">${tx.filter(x=>x.type==='saida').length} pagamentos no mês</div></div><div class="stat-card"><div class="stat-top"><span>Resultado líquido</span><span class="stat-icon icon-blue">◒</span></div><div class="stat-value">${fmtBRL(t.result)}</div><div class="stat-foot ${resultClass}">${t.entries ? ((t.result/t.entries)*100).toFixed(1).replace('.',',') : '0,0'}% de margem líquida</div></div><div class="stat-card"><div class="stat-top"><span>Capital de giro</span><span class="stat-icon icon-amber">◈</span></div><div class="stat-value">${fmtBRL(t.capital)}</div><div class="stat-foot">Inclui ${fmtBRL(t.funds)} em fundos de caixa</div></div>`;
+        renderChart(tx); renderDistribution('#categoryDistribution', tx); renderCashCards(); renderSalesDashboard();
+        const recent = [...tx].sort((a,b) => (b.date + b.createdAt).localeCompare(a.date + a.createdAt)).slice(0,6); qs('#recentTable').innerHTML = movementTable(recent, false);
+      }
+      function renderChart(tx) { const canvas = qs('#cashChart'); const rect = canvas.getBoundingClientRect(); const dpr = window.devicePixelRatio || 1; const w = Math.max(300, rect.width), h = Math.max(190, rect.height); canvas.width = w*dpr; canvas.height = h*dpr; const ctx = canvas.getContext('2d'); ctx.scale(dpr,dpr); ctx.clearRect(0,0,w,h); const days = new Date(Number(state.currentMonth.slice(0,4)), Number(state.currentMonth.slice(5)), 0).getDate(); const values = Array.from({length:days}, (_,i) => { const day = String(i+1).padStart(2,'0'); const prefix = state.currentMonth + '-' + day; return { in: sum(tx.filter(t=>t.date===prefix && t.type==='entrada'), x=>x.amount), out: sum(tx.filter(t=>t.date===prefix && t.type==='saida'), x=>x.amount) }; }); const max = Math.max(100, ...values.map(v => Math.max(v.in,v.out))); const left=39, right=12, top=17, bottom=28, plotW=w-left-right, plotH=h-top-bottom; ctx.strokeStyle='#eef1f5'; ctx.lineWidth=1; ctx.fillStyle='#8e98aa'; ctx.font='10px system-ui'; for(let i=0;i<=3;i++){ const y=top+plotH-(plotH*i/3); ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(w-right,y);ctx.stroke();ctx.fillText(fmtCompact(max*i/3),2,y+3); } const xStep=plotW/Math.max(1,days-1); const drawLine=(key,color)=>{ctx.beginPath(); values.forEach((v,i)=>{const x=left+i*xStep,y=top+plotH-(v[key]/max)*plotH;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.stroke();values.forEach((v,i)=>{if(v[key]>0){const x=left+i*xStep,y=top+plotH-(v[key]/max)*plotH;ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();}})}; drawLine('in','#2e5bff');drawLine('out','#d95c63'); ctx.fillStyle='#8e98aa'; ctx.textAlign='center'; [1, Math.ceil(days/4), Math.ceil(days/2), Math.ceil(days*3/4), days].forEach(day=>{const x=left+(day-1)*xStep;ctx.fillText(String(day).padStart(2,'0'),x,h-8)}); ctx.textAlign='left'; }
+      function renderSalesDashboard() { const stats = salesPeriodStats(); const trendClass = stats.trend > 3 ? 'trend-up' : stats.trend < -3 ? 'trend-down' : 'trend-flat'; const trendIcon = stats.trend > 3 ? '↗' : stats.trend < -3 ? '↘' : '→'; const trendText = stats.trend ? `${trendIcon} ${Math.abs(stats.trend).toFixed(1).replace('.',',')}% ${stats.trend > 0 ? 'de alta' : 'de queda'} na média diária` : '→ Sem variação comparável'; qs('#salesTrendBadge').className = `trend-chip ${trendClass}`; qs('#salesTrendBadge').textContent = trendText; qs('#salesKpis').innerHTML = `<div class="sales-kpi"><span>Total de vendas no mês</span><strong>${fmtBRL(stats.total)}</strong><small>${stats.daily.filter(d=>d.value>0).length} dias com venda registrada</small></div><div class="sales-kpi up"><span>Melhor dia</span><strong>${stats.bestDay ? fmtBRL(stats.bestDay.value) : 'R$ 0,00'}</strong><small>${stats.bestDay ? fmtDate(stats.bestDay.date) : 'Sem dados'}</small></div><div class="sales-kpi"><span>Período mais forte</span><strong>${stats.bestPeriod ? esc(stats.bestPeriod.label) : '—'}</strong><small>${stats.bestPeriod ? fmtBRL(stats.bestPeriod.value) : 'Sem dados'}</small></div>`; renderSalesChart(stats.daily); qs('#salesHistoryTable').innerHTML = `<table><thead><tr><th>Dia</th><th>Data</th><th style="text-align:right">Total de vendas</th><th>Leitura</th></tr></thead><tbody>${stats.daily.filter(d => d.value > 0).sort((a,b)=>b.value-a.value).slice(0,8).map(d => `<tr><td><b>Dia ${String(d.day).padStart(2,'0')}</b></td><td>${fmtDate(d.date)}</td><td style="text-align:right" class="amount in">${fmtBRL(d.value)}</td><td>${d === stats.bestDay ? '<span class="badge badge-in">Melhor dia</span>' : '<span class="badge badge-neutral">Venda registrada</span>'}</td></tr>`).join('') || '<tr><td colspan="4"><div class="empty"><b>Sem vendas fechadas no período</b><span>Ao fechar o caixa, o total de entradas passa a compor este histórico.</span></div></td></tr>'}</tbody></table>`; }
+      function renderSalesChart(daily) { const canvas=qs('#salesChart'); if(!canvas) return; const rect=canvas.getBoundingClientRect(), dpr=window.devicePixelRatio||1, w=Math.max(300,rect.width), h=Math.max(180,rect.height); canvas.width=w*dpr;canvas.height=h*dpr;const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);ctx.clearRect(0,0,w,h);const max=Math.max(100,...daily.map(d=>d.value)),left=39,right=12,top=15,bottom=28,plotW=w-left-right,plotH=h-top-bottom;ctx.strokeStyle='#eef1f5';ctx.lineWidth=1;ctx.fillStyle='#8e98aa';ctx.font='10px system-ui';for(let i=0;i<=3;i++){const y=top+plotH-(plotH*i/3);ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(w-right,y);ctx.stroke();ctx.fillText(fmtCompact(max*i/3),2,y+3);}const step=plotW/Math.max(1,daily.length-1), points=daily.map((d,i)=>({x:left+i*step,y:top+plotH-(d.value/max)*plotH}));ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.lineTo(points[points.length-1].x,top+plotH);ctx.lineTo(points[0].x,top+plotH);ctx.closePath();ctx.fillStyle='rgba(46,91,255,.09)';ctx.fill();ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.strokeStyle='#2e5bff';ctx.lineWidth=2.5;ctx.stroke();points.forEach((p,i)=>{if(daily[i].value>0){ctx.fillStyle='#2e5bff';ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();}});ctx.fillStyle='#8e98aa';ctx.textAlign='center';[1,Math.ceil(daily.length/4),Math.ceil(daily.length/2),Math.ceil(daily.length*3/4),daily.length].forEach(day=>{const x=left+(day-1)*step;ctx.fillText(String(day).padStart(2,'0'),x,h-8);});ctx.textAlign='left'; }
+      function fmtCompact(n) { if (n >= 1000) return 'R$ ' + (n/1000).toFixed(1).replace('.',',') + 'k'; return 'R$ ' + Math.round(n); }
+      function renderDistribution(target, tx) { const el = qs(target); const data = {}; tx.filter(t=>t.type==='saida').forEach(t=>data[t.category]=(data[t.category]||0)+Number(t.amount)); const rows=Object.entries(data).sort((a,b)=>b[1]-a[1]).slice(0,6); const total=sum(rows, x=>x[1]); el.innerHTML = rows.length ? rows.map(([cat,val])=>`<div class="distribution-row"><div class="distribution-label"><span>${esc(cat)}</span><b>${fmtBRL(val)}</b></div><div class="progress"><i style="width:${total?Math.max(3,val/total*100):0}%;background:${['#2e5bff','#8157d9','#15966b','#c88920','#d95c63','#6f7c96'][rows.findIndex(x=>x[0]===cat)%6]}"></i></div></div>`).join('') : `<div class="empty"><div class="empty-icon">◌</div><b>Sem saídas no período</b><span>As categorias aparecerão aqui.</span></div>`; }
+      function renderCashCards() { const el=qs('#cashCards'); el.innerHTML=['1','2'].map(id=>{const tx=periodTx().filter(t=>t.register===id);const opening=sum(periodOpenings().filter(o=>o.register===id),x=>x.amount);const balance=opening+sum(tx.filter(x=>x.type==='entrada'),x=>x.amount)-sum(tx.filter(x=>x.type==='saida'),x=>x.amount);return `<div class="cash-card"><div class="cash-card-top"><span><i class="status-dot"></i>${esc(registerName(id))}</span><span>${tx.length} mov.</span></div><strong>${fmtBRL(balance)}</strong><small>Fundo no mês: ${fmtBRL(opening)}</small></div>`}).join(''); }
+
+      function movementTable(items, actions=true) { if (!items.length) return `<div class="empty"><div class="empty-icon">▤</div><b>Nenhum lançamento encontrado</b><span>Registre entradas e saídas para acompanhar seu caixa.</span></div>`; return `<table><thead><tr><th>Movimento</th><th>Data</th><th>Categoria</th><th>Forma / caixa</th><th>Conciliação</th><th style="text-align:right">Valor</th>${actions?'<th></th>':''}</tr></thead><tbody>${items.map(t=>`<tr><td><div class="desc-cell"><div class="tx-icon ${t.type==='entrada'?'icon-green':'icon-red'}">${t.type==='entrada'?'↗':'↘'}</div><div><b>${esc(t.description)}</b><small>${t.attachment ? '▧ Documento anexado' : (esc(t.notes) || 'Sem observações')}</small></div></div></td><td>${fmtDate(t.date)}</td><td>${esc(t.category)}</td><td><b>${txLabel(t)}</b><br><small style="color:var(--muted)">${esc(registerName(t.register))}</small></td><td>${t.reconciled?'<span class="badge badge-in">✓ Conferido</span>':'<span class="badge badge-warn">Pendente</span>'}</td><td style="text-align:right" class="amount ${t.type==='entrada'?'in':'out'}">${t.type==='entrada'?'+':'−'} ${fmtBRL(t.amount)}</td>${actions?`<td style="text-align:right"><button class="btn btn-ghost btn-sm delete-tx" data-id="${esc(t.id)}" title="Excluir lançamento">Excluir</button></td>`:''}</tr>`).join('')}</tbody></table>`; }
+      function renderMovements() { const month=qs('#movementMonth')?.value || state.currentMonth; const type=qs('#movementType')?.value || 'all'; const method=qs('#movementMethod')?.value || 'all'; const search=(qs('#movementSearch')?.value || '').toLowerCase(); let tx=state.transactions.filter(t=>monthKey(t.date)===month && (type==='all'||t.type===type) && (method==='all'||t.paymentMethod===method) && (!search || [t.description,t.category,t.notes,collaboratorName(t.collaborator)].join(' ').toLowerCase().includes(search))); tx.sort((a,b)=>(b.date+b.createdAt).localeCompare(a.date+a.createdAt)); qs('#movementsTable').innerHTML=movementTable(tx,true); }
+
+      function renderRegister() { qsa('.register-tab').forEach(b=>b.classList.toggle('active',b.dataset.register===activeRegister)); qs('#registerTitle').textContent=registerName(activeRegister); const tx=state.transactions.filter(t=>t.register===activeRegister); const cashTx=tx.filter(t=>t.paymentMethod==='dinheiro'); const opening=sum(state.openings.filter(o=>o.register===activeRegister),x=>x.amount); const entries=sum(cashTx.filter(t=>t.type==='entrada'),x=>x.amount); const exits=sum(cashTx.filter(t=>t.type==='saida'),x=>x.amount); qs('#registerMetrics').innerHTML=`<div class="metric-line"><span>Saldo de dinheiro acumulado</span><strong>${fmtBRL(opening+entries-exits)}</strong></div><div class="metric-line"><span>Fundos registrados</span><strong>${fmtBRL(opening)}</strong></div><div class="metric-line"><span>Entradas em dinheiro</span><strong style="color:var(--green)">+ ${fmtBRL(entries)}</strong></div><div class="metric-line"><span>Saídas em dinheiro</span><strong style="color:var(--red)">− ${fmtBRL(exits)}</strong></div><div class="metric-line"><span>Movimentos deste caixa</span><strong>${tx.length}</strong></div>`; const date=qs('#closingDate').value || todayISO(); updateExpectedNotice(date); const closes=state.closings.filter(c=>c.register===activeRegister).sort((a,b)=>(b.date+b.closedAt).localeCompare(a.date+a.closedAt)); qs('#closingsTable').innerHTML=closes.length?`<table><thead><tr><th>Data</th><th>Responsável</th><th>Entradas</th><th>Saídas</th><th>Esperado</th><th>Contado</th><th>Diferença</th><th>Detalhes</th><th></th></tr></thead><tbody>${closes.map(c=>`<tr><td>${fmtDate(c.date)}</td><td>${esc(collaboratorName(c.collaborator))}</td><td class="amount in">${fmtBRL(c.entryTotal || 0)}</td><td class="amount out">${fmtBRL(c.exitTotal || 0)}</td><td>${fmtBRL(c.expected)}</td><td>${fmtBRL(c.actual)}</td><td class="amount ${c.diff>=0?'in':'out'}">${c.diff>=0?'+':'−'} ${fmtBRL(Math.abs(c.diff))}</td><td>${c.expenses?.length ? c.expenses.map(item => `${esc(item.description)}: ${fmtBRL(item.amount)}`).join('<br>') : (esc(c.notes)||'—')}</td><td style="text-align:right"><button class="btn btn-ghost btn-sm delete-closing" data-id="${esc(c.id)}" title="Apagar fechamento e registrar no histórico">Apagar</button></td></tr>`).join('')}</tbody></table>`:`<div class="empty"><div class="empty-icon">✓</div><b>Nenhum fechamento registrado</b><span>Faça a conferência do caixa ao final do turno.</span></div>`; const opens=state.openings.filter(o=>o.register===activeRegister).sort((a,b)=>b.date.localeCompare(a.date)); qs('#openingsTable').innerHTML=opens.length?`<table><thead><tr><th>Data</th><th>Colaborador</th><th>Valor</th><th>Observação</th></tr></thead><tbody>${opens.map(o=>`<tr><td>${fmtDate(o.date)}</td><td>${esc(collaboratorName(o.collaborator))}</td><td class="amount in">+ ${fmtBRL(o.amount)}</td><td>${esc(o.notes)||'—'}</td></tr>`).join('')}</tbody></table>`:`<div class="empty"><div class="empty-icon">◈</div><b>Nenhum fundo registrado</b><span>Registre o valor inicial para controlar o troco.</span></div>`; const audit=state.auditLog.filter(a=>a.register===activeRegister).sort((a,b)=>(b.timestamp||'').localeCompare(a.timestamp||'')); qs('#auditTable').innerHTML=audit.length?`<table><thead><tr><th>Data da ação</th><th>Ação</th><th>Fechamento original</th><th>Responsável pela ação</th><th>Motivo</th></tr></thead><tbody>${audit.map(a=>`<tr><td>${fmtDate((a.timestamp||'').slice(0,10))}</td><td class="audit-action">${esc(a.actionLabel||'Fechamento apagado')}</td><td>${fmtDate(a.originalDate)} · ${fmtBRL(a.entryTotal||0)}</td><td>${esc(a.performedBy||'Administrador')}</td><td>${esc(a.reason)||'Exclusão solicitada pelo usuário'}</td></tr>`).join('')}</tbody></table>`:`<div class="empty"><div class="empty-icon">⌁</div><b>Nenhuma alteração registrada</b><span>Fechamentos apagados aparecerão aqui para auditoria.</span></div>`; }
+      function updateExpectedNotice(date) { const draft=getClosingDraft(); const expected=draft.expected; const actual=Number(qs('#closingActual').value || 0); updateClosingTotals(); const el=qs('#expectedNotice'); el.innerHTML = actual ? `<strong>Saldo esperado em dinheiro: ${fmtBRL(expected)}</strong><br>Diferença prevista: <b style="color:${actual-expected>=0?'var(--green)':'var(--red)'}">${actual-expected>=0?'+':'−'} ${fmtBRL(Math.abs(actual-expected))}</b>` : `Saldo esperado em dinheiro em ${fmtDate(date)}: <strong>${fmtBRL(expected)}</strong><br>Informe o valor contado para calcular a diferença.`; }
+
+      function renderReconciliation() { const month=qs('#reconciliationMonth')?.value || state.currentMonth; const status=qs('#reconciliationStatus')?.value || 'all'; let tx=state.transactions.filter(t=>monthKey(t.date)===month && (status==='all'||(status==='done'?t.reconciled:!t.reconciled))); tx.sort((a,b)=>(b.date+b.createdAt).localeCompare(a.date+a.createdAt)); const total=state.transactions.filter(t=>monthKey(t.date)===month); const done=total.filter(t=>t.reconciled); qs('#reconciliationSummary').innerHTML=`<div class="mini-stat"><span>Total de movimentos</span><strong>${total.length}</strong></div><div class="mini-stat"><span>Conferidos</span><strong style="color:var(--green)">${done.length}</strong></div><div class="mini-stat"><span>Pendentes</span><strong style="color:var(--amber)">${total.length-done.length}</strong></div><div class="mini-stat"><span>Percentual conciliado</span><strong>${total.length?Math.round(done.length/total.length*100):0}%</strong></div>`; qs('#reconciliationTable').innerHTML=tx.length?`<table><thead><tr><th style="width:40px">OK</th><th>Movimento</th><th>Data</th><th>Documento</th><th>Valor</th><th>Observações</th></tr></thead><tbody>${tx.map(t=>`<tr><td><input class="check reconcile-check" type="checkbox" data-id="${esc(t.id)}" ${t.reconciled?'checked':''} /></td><td><div class="desc-cell"><div class="tx-icon ${t.type==='entrada'?'icon-green':'icon-red'}">${t.type==='entrada'?'↗':'↘'}</div><div><b>${esc(t.description)}</b><small>${esc(t.category)} · ${txLabel(t)}</small></div></div></td><td>${fmtDate(t.date)}</td><td>${t.attachment?`<a class="attachment-link" href="${t.attachment.data}" download="${esc(t.attachment.name)}" target="_blank">▧ ${esc(t.attachment.name)}</a>`:'<span class="badge badge-neutral">Sem anexo</span>'}</td><td class="amount ${t.type==='entrada'?'in':'out'}">${t.type==='entrada'?'+':'−'} ${fmtBRL(t.amount)}</td><td>${esc(t.notes)||'—'}</td></tr>`).join('')}</tbody></table>`:`<div class="empty"><div class="empty-icon">✓</div><b>Nada para conciliar</b><span>Não há lançamentos com este filtro.</span></div>`; }
+
+      function renderReports() { const t=totals(); qs('#reportResult').textContent=fmtBRL(t.result); qs('#reportMargin').textContent=`Margem líquida: ${t.entries?((t.result/t.entries)*100).toFixed(1).replace('.',','):'0,0'}%`; const conc=t.tx.filter(x=>x.reconciled).length; qs('#reportKpis').innerHTML=`<div class="mini-stat"><span>Entradas brutas</span><strong style="color:var(--green)">${fmtBRL(t.entries)}</strong></div><div class="mini-stat"><span>Custos e despesas</span><strong style="color:var(--red)">${fmtBRL(t.exits)}</strong></div><div class="mini-stat"><span>Capital de giro</span><strong>${fmtBRL(t.capital)}</strong></div><div class="mini-stat"><span>Conciliação</span><strong>${t.tx.length?Math.round(conc/t.tx.length*100):0}%</strong></div>`; qs('#reportSummary').innerHTML=`<div class="metric-line"><span>Período de referência</span><strong style="text-transform:capitalize">${monthLabel(state.currentMonth)}</strong></div><div class="metric-line"><span>Total de recebimentos</span><strong>${t.tx.filter(x=>x.type==='entrada').length}</strong></div><div class="metric-line"><span>Total de pagamentos</span><strong>${t.tx.filter(x=>x.type==='saida').length}</strong></div><div class="metric-line"><span>Ticket médio de entrada</span><strong>${fmtBRL(t.tx.filter(x=>x.type==='entrada').length?t.entries/t.tx.filter(x=>x.type==='entrada').length:0)}</strong></div><div class="metric-line"><span>Fundos de caixa</span><strong>${fmtBRL(t.funds)}</strong></div>`; renderDistribution('#reportCategories', t.tx); const categoryData={}; t.tx.filter(x=>x.type==='saida').forEach(x=>categoryData[x.category]=(categoryData[x.category]||0)+Number(x.amount)); qs('#monthlyStatement').innerHTML=`<table><thead><tr><th>Indicador</th><th>Quantidade</th><th style="text-align:right">Valor</th><th>Participação</th></tr></thead><tbody><tr><td><b>Receita operacional</b></td><td>${t.tx.filter(x=>x.type==='entrada').length}</td><td style="text-align:right" class="amount in">${fmtBRL(t.entries)}</td><td>100%</td></tr>${Object.entries(categoryData).sort((a,b)=>b[1]-a[1]).map(([c,v])=>`<tr><td>${esc(c)}</td><td>—</td><td style="text-align:right" class="amount out">${fmtBRL(v)}</td><td>${t.exits?((v/t.exits)*100).toFixed(1).replace('.',','):'0,0'}%</td></tr>`).join('')}<tr style="background:#fbfcff"><td><b>Resultado líquido</b></td><td>${t.tx.length}</td><td style="text-align:right" class="amount ${t.result>=0?'in':'out'}">${fmtBRL(t.result)}</td><td>${t.entries?((t.result/t.entries)*100).toFixed(1).replace('.',','):'0,0'}%</td></tr></tbody></table>`; }
+
+      function renderSettings() { const el=qs('#collaboratorsList'); el.innerHTML=state.collaborators.map(c=>`<div class="collaborator"><div class="collab-left"><div class="collab-avatar">${initial(c.name)}</div><div><b>${esc(c.name)}</b><small>${esc(c.role||'Colaborador')}</small></div></div><span class="code">••••</span></div>`).join(''); }
+
+      async function readAttachment(file) { if (!file) return null; if (file.size > 5*1024*1024) throw new Error('O anexo ultrapassa o limite de 5 MB.'); return new Promise((resolve,reject)=>{ const r=new FileReader(); r.onload=()=>resolve({name:file.name,type:file.type,size:file.size,data:r.result}); r.onerror=()=>reject(new Error('Não foi possível ler o anexo.')); r.readAsDataURL(file); }); }
+      function download(name, content, type) { const blob=new Blob([content],{type}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
+      function csvCell(v) { return '"' + String(v ?? '').replace(/"/g,'""') + '"'; }
+      function exportCSV() { const rows=[['Data','Tipo','Descrição','Categoria','Valor','Forma de pagamento','Caixa','Colaborador','Conferido','Observação']].concat(state.transactions.map(t=>[t.date,t.type,t.description,t.category,t.amount,txLabel(t),registerName(t.register),collaboratorName(t.collaborator),t.reconciled?'Sim':'Não',t.notes||''].map(csvCell))); download('fluxo-lancamentos-'+state.currentMonth+'.csv','\ufeff'+rows.map(r=>r.join(';')).join('\n'),'text/csv;charset=utf-8'); notify('CSV exportado com sucesso.'); }
+      function exportJSON() { download('fluxo-backup-'+todayISO()+'.json', JSON.stringify(state,null,2),'application/json'); notify('Backup completo baixado.'); }
+
+      qsa('[data-page]').forEach(el=>el.addEventListener('click',()=>navigate(el.dataset.page)));
+      qs('#mobileMenu').addEventListener('click',()=>qs('#sidebar').classList.toggle('open'));
+      qs('#quickAdd').addEventListener('click',openMovement); qs('#dashboardAdd').addEventListener('click',openMovement); qs('#movementAdd').addEventListener('click',openMovement);
+      qs('#globalMonth').addEventListener('change',e=>{state.currentMonth=e.target.value||monthKey(new Date());saveState();setValue('movementMonth',state.currentMonth);setValue('reconciliationMonth',state.currentMonth);updateAll();});
+      qsa('[data-close]').forEach(el=>el.addEventListener('click',()=>closeModal(el.dataset.close)));
+      qsa('.modal-backdrop').forEach(el=>el.addEventListener('click',e=>{if(e.target===el) el.classList.remove('open')}));
+      qsa('input[name="txType"]').forEach(r=>r.addEventListener('change',populateCategories));
+      qs('#movementForm').addEventListener('submit',async e=>{e.preventDefault();try{const file=qs('#txAttachment').files[0];const attachment=await readAttachment(file);const type=qs('input[name="txType"]:checked').value;state.transactions.push({id:uid(),type,description:qs('#txDescription').value.trim(),amount:Number(qs('#txAmount').value),date:qs('#txDate').value,category:qs('#txCategory').value,paymentMethod:qs('#txMethod').value,register:qs('#txRegister').value,collaborator:qs('#txCollaborator').value,notes:qs('#txNotes').value.trim(),attachment,reconciled:false,createdAt:new Date().toISOString()});saveState();closeModal('movementModal');updateAll();notify('Lançamento salvo com sucesso.');}catch(err){notify(err.message,'error')}});
+      qs('#openingAdd').addEventListener('click',()=>{setValue('openingDate',todayISO());populateCollaborators();showModal('openingModal');});
+      qs('#openingForm').addEventListener('submit',e=>{e.preventDefault();state.openings.push({id:uid(),register:qs('#openingRegister').value,date:qs('#openingDate').value,amount:Number(qs('#openingAmount').value),collaborator:qs('#openingCollaborator').value,notes:qs('#openingNotes').value.trim()});saveState();closeModal('openingModal');updateAll();notify('Fundo de caixa registrado.');});
+      qs('#closingAdd').addEventListener('click',()=>{qs('#closingDate').value=todayISO();['closingPix','closingDebit','closingCredit','closingCash','closingActual','closingCode','closingNotes'].forEach(id=>setValue(id,''));renderClosingExpenses([{}]);qs('#closingActual').focus();});
+      qs('#addClosingExpense').addEventListener('click',()=>{const expenses=getClosingExpenses();expenses.push({});renderClosingExpenses(expenses);const rows=qsa('.expense-description');rows[rows.length-1]?.focus();});
+      qs('#closingForm').addEventListener('input',e=>{if(e.target.matches('.closing-income, .expense-description, .expense-amount, #closingActual, #closingDate')) updateExpectedNotice(qs('#closingDate').value);});
+      qs('#closingExpenseList').addEventListener('click',e=>{if(!e.target.classList.contains('remove-expense'))return;const expenses=getClosingExpenses();const row=e.target.closest('.closing-expense-row');const index=[...qs('#closingExpenseList').children].indexOf(row);expenses.splice(index,1);renderClosingExpenses(expenses);});
+      qs('#closingForm').addEventListener('submit',e=>{e.preventDefault();const coll=state.collaborators.find(c=>c.id===qs('#closingCollaborator').value);if(!coll || coll.code!==qs('#closingCode').value){notify('Código de fechamento inválido para este colaborador.','error');return;}const date=qs('#closingDate').value,draft=getClosingDraft(),expected=draft.expected,actual=Number(qs('#closingActual').value);state.closings.push({id:uid(),register:activeRegister,date,expected,actual,diff:actual-expected,collaborator:coll.id,notes:qs('#closingNotes').value.trim(),pix:draft.pix,debit:draft.debit,credit:draft.credit,cash:draft.cash,entryTotal:draft.entryTotal,exitTotal:draft.exitTotal,expenses:draft.expenses,closedAt:new Date().toISOString()});saveState();updateAll();notify('Fechamento validado e contabilizado automaticamente.');});
+      qs('#closingsTable').addEventListener('click',e=>{const btn=e.target.closest('.delete-closing');if(!btn)return;const closing=state.closings.find(c=>c.id===btn.dataset.id);if(!closing)return;const reason=prompt('Informe o motivo da exclusão deste fechamento (opcional):','Fechamento registrado incorretamente');if(reason===null)return;if(confirm('Apagar este fechamento? A ação será mantida no histórico de auditoria.')){state.auditLog.push({id:uid(),action:'delete_closing',actionLabel:'Fechamento apagado',register:closing.register,originalDate:closing.date,entryTotal:closing.entryTotal||0,exitTotal:closing.exitTotal||0,performedBy:state.business.owner||'Administrador',reason:reason.trim(),timestamp:new Date().toISOString(),snapshot:closing});state.closings=state.closings.filter(c=>c.id!==closing.id);saveState();updateAll();notify('Fechamento apagado e registrado no histórico.');}});
+      qsa('.register-tab').forEach(el=>el.addEventListener('click',()=>{activeRegister=el.dataset.register;renderRegister()}));
+      ['movementMonth','movementType','movementMethod','movementSearch'].forEach(id=>qs('#'+id).addEventListener('input',renderMovements));
+      qs('#clearMovementFilters').addEventListener('click',()=>{setValue('movementMonth',state.currentMonth);setValue('movementType','all');setValue('movementMethod','all');setValue('movementSearch','');renderMovements();});
+      qs('#movementsTable').addEventListener('click',e=>{const btn=e.target.closest('.delete-tx');if(!btn)return;if(confirm('Excluir este lançamento? Esta ação não pode ser desfeita.')){state.transactions=state.transactions.filter(t=>t.id!==btn.dataset.id);saveState();updateAll();notify('Lançamento excluído.');}});
+      qsa('#reconciliationMonth,#reconciliationStatus').forEach(el=>el.addEventListener('input',renderReconciliation));
+      qs('#reconciliationTable').addEventListener('change',e=>{if(!e.target.classList.contains('reconcile-check'))return;const t=state.transactions.find(x=>x.id===e.target.dataset.id);if(t){t.reconciled=e.target.checked;saveState();renderReconciliation();renderReports();notify(e.target.checked?'Movimento marcado como conferido.':'Movimento voltou para pendente.');}});
+      qs('#reconcileAll').addEventListener('click',()=>{const month=qs('#reconciliationMonth').value;const status=qs('#reconciliationStatus').value;state.transactions.filter(t=>monthKey(t.date)===month && (status==='pending'||status==='all')).forEach(t=>t.reconciled=true);saveState();updateAll();notify('Movimentos filtrados marcados como conferidos.');});
+      qs('#printReconciliation').addEventListener('click',()=>window.print()); qs('#printReport').addEventListener('click',()=>window.print()); qs('#exportReport').addEventListener('click',exportJSON); qs('#exportMovements').addEventListener('click',exportCSV);
+      qs('#businessForm').addEventListener('submit',e=>{e.preventDefault();state.business={name:qs('#businessName').value.trim()||'Meu negócio',doc:qs('#businessDoc').value.trim(),goal:Number(qs('#businessGoal').value||0),owner:qs('#businessOwner').value.trim()||'Administrador'};saveState();updateAll();notify('Dados do negócio atualizados.');});
+      qs('#collaboratorAdd').addEventListener('click',()=>{qs('#collaboratorForm').reset();showModal('collaboratorModal');});
+      qs('#collaboratorForm').addEventListener('submit',e=>{e.preventDefault();const code=qs('#collabCode').value.trim();if(!/^\d{4,8}$/.test(code)){notify('Use um código numérico entre 4 e 8 dígitos.','error');return;}state.collaborators.push({id:uid(),name:qs('#collabName').value.trim(),role:qs('#collabRole').value.trim()||'Colaborador',code});saveState();closeModal('collaboratorModal');updateAll();notify('Colaborador adicionado.');});
+      qs('#backupExport').addEventListener('click',exportJSON); qs('#backupImport').addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const imported=JSON.parse(reader.result);if(!imported.transactions||!imported.business)throw new Error('Arquivo inválido.');state={...defaultState(),...imported};saveState();updateAll();notify('Backup restaurado com sucesso.');}catch(err){notify('Não foi possível restaurar este backup.','error');}};reader.readAsText(file);e.target.value='';});
+      qs('#clearAllData').addEventListener('click',()=>{if(confirm('Isso apagará lançamentos, anexos, fundos e fechamentos deste navegador. Deseja continuar?')){state=defaultState();saveState();updateAll();notify('Dados locais limpos.');}});
+      qs('#globalSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){navigate('movements');setValue('movementSearch',e.target.value);renderMovements();}});
+      qs('#pasteAdd').addEventListener('click', () => {
+        qs('#pasteText').value = '';
+        qs('#pasteError').className = 'auth-error';
+        const btn = qs('#pasteInterpret');
+        btn.disabled = false; btn.textContent = '✨ Interpretar com IA';
+        showModal('pasteModal');
+        setTimeout(() => qs('#pasteText').focus(), 30);
+      });
+
+      qs('#pasteInterpret').addEventListener('click', async () => {
+        const text = qs('#pasteText').value.trim();
+        const errorEl = qs('#pasteError');
+        errorEl.className = 'auth-error';
+        if (!text) { errorEl.textContent = 'Cole o texto da nota antes de interpretar.'; errorEl.className = 'auth-error show'; return; }
+        const btn = qs('#pasteInterpret');
+        btn.disabled = true; btn.textContent = 'Interpretando...';
+        try {
+          const { suggestion } = await apiFetch('/api/extract-entry', { method: 'POST', body: JSON.stringify({ text }) });
+          closeModal('pasteModal');
+          applyExtractedSuggestion(suggestion);
+        } catch (err) {
+          errorEl.textContent = err.message;
+          errorEl.className = 'auth-error show';
+        } finally {
+          btn.disabled = false; btn.textContent = '✨ Interpretar com IA';
+        }
+      });
+
+      function applyExtractedSuggestion(s) {
+        qs('#movementForm').reset();
+        const radio = qs(`input[name="txType"][value="${s.type}"]`);
+        if (radio) radio.checked = true;
+        populateCategories();
+        populateCollaborators();
+        setValue('txDescription', s.description || '');
+        setValue('txAmount', s.amount != null ? s.amount : '');
+        setValue('txDate', s.date || todayISO());
+        if (s.category) setValue('txCategory', s.category);
+        if (s.paymentMethod) setValue('txMethod', s.paymentMethod);
+        showModal('movementModal');
+        const lowConfidence = s.confidence === 'baixa';
+        const hint = lowConfidence
+          ? 'A IA teve dificuldade para ler alguns dados' + (s.notes ? ': ' + s.notes : '') + '. Confira tudo antes de salvar.'
+          : 'Nota interpretada — confira os dados e salve.';
+        notify(hint, lowConfidence ? 'error' : 'success');
+        setTimeout(() => qs('#txAmount').focus(), 30);
+      }
+
+      window.addEventListener('resize',()=>{if(state.currentPage==='dashboard'){renderChart(periodTx());renderSalesChart(salesByDay())}});
+
+      let authMode = 'login';
+      function showAuthOverlay() { qs('#authOverlay').classList.remove('hidden'); }
+      function hideAuthOverlay() { qs('#authOverlay').classList.add('hidden'); }
+      function setAuthMode(mode) {
+        authMode = mode;
+        qsa('.auth-tab').forEach(b => b.classList.toggle('active', b.dataset.authMode === mode));
+        qs('#authBusinessNameField').style.display = mode === 'register' ? 'grid' : 'none';
+        qs('#authSubmit').textContent = mode === 'register' ? 'Criar conta' : 'Entrar';
+        qs('#authError').className = 'auth-error';
+      }
+      qsa('.auth-tab').forEach(b => b.addEventListener('click', () => setAuthMode(b.dataset.authMode)));
+
+      qs('#authForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const errorEl = qs('#authError');
+        errorEl.className = 'auth-error';
+        const email = qs('#authEmail').value.trim();
+        const password = qs('#authPassword').value;
+        const businessName = qs('#authBusinessName').value.trim();
+        const submitBtn = qs('#authSubmit');
+        submitBtn.disabled = true;
+        try {
+          const endpoint = authMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+          const body = authMode === 'register' ? { email, password, businessName } : { email, password };
+          const data = await apiFetch(endpoint, { method: 'POST', body: JSON.stringify(body) });
+          authToken = data.token;
+          localStorage.setItem(AUTH_TOKEN_KEY, authToken);
+          localStorage.setItem(AUTH_EMAIL_KEY, email);
+          await afterLogin();
+        } catch (err) {
+          errorEl.textContent = err.message;
+          errorEl.className = 'auth-error show';
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+
+      qs('#logoutBtn').addEventListener('click', () => {
+        if (!confirm('Sair da conta neste dispositivo? Os dados sincronizados continuam salvos no servidor.')) return;
+        authToken = null;
+        localStorage.removeItem(AUTH_TOKEN_KEY);
+        state = defaultState();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        location.reload();
+      });
+
+      async function afterLogin() {
+        hideAuthOverlay();
+        const acc = qs('#accountEmail'); if (acc) acc.textContent = localStorage.getItem(AUTH_EMAIL_KEY) || '—';
+        try {
+          const { state: serverState } = await apiFetch('/api/state');
+          if (serverState) {
+            const base = defaultState();
+            state = {
+              ...base, ...serverState,
+              business: { ...base.business, ...(serverState.business || {}) },
+              registers: { ...base.registers, ...(serverState.registers || {}) },
+              collaborators: serverState.collaborators?.length ? serverState.collaborators : base.collaborators,
+              transactions: serverState.transactions || [], openings: serverState.openings || [],
+              closings: serverState.closings || [], auditLog: serverState.auditLog || [],
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            setSyncStatus('synced');
+          } else {
+            // Conta nova sem estado salvo ainda: envia o estado local (ou o padrão) como ponto de partida.
+            await syncStateToServer();
+          }
+        } catch (err) {
+          notify('Login feito, mas não foi possível carregar os dados do servidor agora: ' + err.message, 'error');
+          setSyncStatus('error');
+        }
+        updateAll();
+      }
+
+      function boot() {
+        if (!authToken) { showAuthOverlay(); return; }
+        afterLogin();
+      }
+      boot();
+    })();
+  </script>
+</body>
+</html>
