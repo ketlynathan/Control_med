@@ -1,7 +1,8 @@
 const { getAuthBusinessId } = require('./_lib/auth');
 
 // Groq exposes an OpenAI-compatible Chat Completions API.
-const MODEL = 'llama-3.3-70b-versatile';
+const TEXT_MODEL = 'llama-3.3-70b-versatile';
+const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
 
 const ENTRY_CATEGORIES = ['Vendas', 'Serviços', 'Recebimento de cliente', 'Aporte', 'Outras entradas'];
 const EXIT_CATEGORIES = ['Mercadoria', 'Fornecedores', 'Aluguel', 'Folha e pró-labore', 'Impostos', 'Marketing', 'Taxas bancárias', 'Contas e serviços', 'Manutenção', 'Outras saídas'];
@@ -9,8 +10,8 @@ const ALLOWED_TYPES = ['entrada', 'saida'];
 const ALLOWED_METHODS = ['dinheiro', 'pix', 'cartao', 'transferencia', 'outro'];
 const ALLOWED_CONFIDENCE = ['alta', 'media', 'baixa'];
 
-function buildSystemPrompt() {
-  return `Você extrai dados estruturados de notas fiscais, recibos ou comprovantes (texto transcrito por OCR/IA a partir de uma foto) para um sistema de controle de caixa de um pequeno negócio.
+function buildSystemPrompt(hasImage) {
+  return `Você extrai dados estruturados de notas fiscais, recibos ou comprovantes ${hasImage ? 'a partir da imagem enviada' : '(texto transcrito por OCR/IA a partir de uma foto)'} para um sistema de controle de caixa de um pequeno negócio.
 
 Responda APENAS com um objeto JSON válido, sem markdown, sem crases, sem nenhum texto fora do JSON, exatamente neste formato:
 {"type":"entrada"|"saida","description":"string curta, até 60 caracteres","amount":numero,"date":"YYYY-MM-DD"|null,"category":"uma das opções abaixo","paymentMethod":"dinheiro"|"pix"|"cartao"|"transferencia"|"outro","confidence":"alta"|"media"|"baixa","notes":"string curta, ou vazio"}
@@ -42,12 +43,17 @@ module.exports = async (req, res) => {
     return res.status(401).json({ error: 'Sessão inválida ou expirada. Faça login novamente.' });
   }
 
-  const { text } = req.body || {};
-  if (!text || !String(text).trim()) {
-    return res.status(400).json({ error: 'Cole o texto da nota antes de interpretar.' });
+  const { text, imageData } = req.body || {};
+  const cleanText = String(text || '').trim();
+  const cleanImage = typeof imageData === 'string' && imageData.startsWith('data:image/') ? imageData : '';
+  if (!cleanText && !cleanImage) {
+    return res.status(400).json({ error: 'Envie uma foto ou cole o texto da nota antes de interpretar.' });
   }
-  if (String(text).length > 6000) {
+  if (cleanText.length > 6000) {
     return res.status(400).json({ error: 'Texto muito longo. Cole apenas o conteúdo da nota/recibo.' });
+  }
+  if (cleanImage.length > 8 * 1024 * 1024) {
+    return res.status(400).json({ error: 'A imagem é muito grande. Envie uma foto de até 6 MB.' });
   }
 
   if (!process.env.GROQ_API_KEY) {
@@ -62,13 +68,16 @@ module.exports = async (req, res) => {
         Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: MODEL,
+        model: cleanImage ? VISION_MODEL : TEXT_MODEL,
         max_completion_tokens: 400,
         temperature: 0,
         response_format: { type: 'json_object' },
         messages: [
-          { role: 'system', content: buildSystemPrompt() },
-          { role: 'user', content: String(text).trim() },
+          { role: 'system', content: buildSystemPrompt(Boolean(cleanImage)) },
+          { role: 'user', content: cleanImage ? [
+            { type: 'text', text: cleanText || 'Leia esta nota fiscal e extraia o lançamento financeiro.' },
+            { type: 'image_url', image_url: { url: cleanImage } },
+          ] : cleanText },
         ],
       }),
     });
