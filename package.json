@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "Controle de caixa com backend em Vercel Functions + Postgres",
+  "scripts": {
+    "check": "node --check api/_lib/auth.js && node --check api/_lib/db.js && node --check api/auth/login.js && node --check api/auth/register.js && node --check api/state.js && node --check api/extract-entry.js"
+  },
   "dependencies": {
     "pg": "^8.11.5",
     "bcryptjs": "^2.4.3",

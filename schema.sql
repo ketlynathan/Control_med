@@ -16,3 +16,4 @@ CREATE TABLE IF NOT EXISTS business_state (
   state JSONB NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS business_state_updated_at_idx ON business_state (updated_at);
