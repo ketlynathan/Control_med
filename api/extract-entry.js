@@ -69,8 +69,9 @@ module.exports = async (req, res) => {
       },
       body: JSON.stringify({
         model: cleanImage ? VISION_MODEL : TEXT_MODEL,
-        max_completion_tokens: 400,
-        temperature: 0,
+        max_completion_tokens: cleanImage ? 800 : 400,
+        temperature: cleanImage ? 0.7 : 0,
+        reasoning_effort: cleanImage ? 'none' : undefined,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: buildSystemPrompt(Boolean(cleanImage)) },
