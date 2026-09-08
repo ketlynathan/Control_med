@@ -21,19 +21,23 @@ module.exports = async (req, res) => {
 
     const normalizedEmail = String(email).trim().toLowerCase();
     const pool = getPool();
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    const existing = await pool.query('SELECT id FROM businesses WHERE email = $1', [normalizedEmail]);
-    if (existing.rows.length) {
-      return res.status(409).json({ error: 'Já existe uma conta com este e-mail.' });
-    }
+      const existing = await client.query('SELECT id FROM businesses WHERE email = $1', [normalizedEmail]);
+      if (existing.rows.length) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'Já existe uma conta com este e-mail.' });
+      }
 
-    const passwordHash = await hashPassword(password);
+      const passwordHash = await hashPassword(password);
 
-    const insert = await pool.query(
-      'INSERT INTO businesses (email, password_hash) VALUES ($1, $2) RETURNING id',
-      [normalizedEmail, passwordHash]
-    );
-    const businessId = insert.rows[0].id;
+      const insert = await client.query(
+        'INSERT INTO businesses (email, password_hash) VALUES ($1, $2) RETURNING id',
+        [normalizedEmail, passwordHash]
+      );
+      const businessId = insert.rows[0].id;
 
     const initialState = {
       business: {
@@ -44,13 +48,20 @@ module.exports = async (req, res) => {
       },
     };
 
-    await pool.query(
-      'INSERT INTO business_state (business_id, state) VALUES ($1, $2)',
-      [businessId, initialState]
-    );
+      await client.query(
+        'INSERT INTO business_state (business_id, state) VALUES ($1, $2)',
+        [businessId, initialState]
+      );
 
-    const token = signToken({ businessId });
-    return res.status(201).json({ token });
+      const token = signToken({ businessId });
+      await client.query('COMMIT');
+      return res.status(201).json({ token });
+    } catch (transactionError) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw transactionError;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     console.error('register error:', err);
     return res.status(500).json({ error: 'Erro interno ao criar a conta.' });

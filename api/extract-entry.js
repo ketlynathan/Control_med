@@ -1,8 +1,7 @@
 const { getAuthBusinessId } = require('./_lib/auth');
 
-// Haiku is Anthropic's fastest/cheapest model — a good fit for a short,
-// well-defined extraction task like this one. See docs.claude.com for pricing.
-const MODEL = 'claude-haiku-4-5-20251001';
+// Groq exposes an OpenAI-compatible Chat Completions API.
+const MODEL = 'llama-3.3-70b-versatile';
 
 const ENTRY_CATEGORIES = ['Vendas', 'Serviços', 'Recebimento de cliente', 'Aporte', 'Outras entradas'];
 const EXIT_CATEGORIES = ['Mercadoria', 'Fornecedores', 'Aluguel', 'Folha e pró-labore', 'Impostos', 'Marketing', 'Taxas bancárias', 'Contas e serviços', 'Manutenção', 'Outras saídas'];
@@ -51,43 +50,46 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'Texto muito longo. Cole apenas o conteúdo da nota/recibo.' });
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return res.status(500).json({ error: 'ANTHROPIC_API_KEY não está configurada nas variáveis de ambiente da Vercel.' });
+  if (!process.env.GROQ_API_KEY) {
+    return res.status(500).json({ error: 'GROQ_API_KEY não está configurada nas variáveis de ambiente da Vercel.' });
   }
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
+        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 400,
-        system: buildSystemPrompt(),
-        messages: [{ role: 'user', content: String(text).trim() }],
+        max_completion_tokens: 400,
+        temperature: 0,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: buildSystemPrompt() },
+          { role: 'user', content: String(text).trim() },
+        ],
       }),
     });
 
     if (!response.ok) {
       const errBody = await response.text();
-      console.error('Anthropic API error:', response.status, errBody);
+      console.error('Groq API error:', response.status, errBody);
       return res.status(502).json({ error: 'Não foi possível interpretar a nota agora. Tente novamente em instantes.' });
     }
 
     const data = await response.json();
-    const textBlock = (data.content || []).find(b => b.type === 'text');
-    if (!textBlock) {
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) {
       return res.status(502).json({ error: 'A IA não retornou uma resposta interpretável.' });
     }
 
     let parsed;
     try {
-      parsed = safeParseJSON(textBlock.text);
+      parsed = safeParseJSON(content);
     } catch (e) {
-      console.error('JSON parse failed for:', textBlock.text);
+      console.error('JSON parse failed for:', content);
       return res.status(502).json({ error: 'A IA respondeu em um formato inesperado. Tente novamente.' });
     }
 
