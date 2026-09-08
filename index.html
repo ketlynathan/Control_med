@@ -407,6 +407,9 @@
       function pharmacyExpiryLabel(item) { const days = pharmacyDaysUntil(item.expiryDate); if (days === null) return 'Sem validade'; if (days < 0) return `Vencido há ${Math.abs(days)} dia(s)`; if (days === 0) return 'Vence hoje'; return `Vence em ${days} dia(s)`; }
       function pharmacyBadge(label, tone) { const colors = { red: 'badge-out', amber: 'badge-warn', green: 'badge-in', neutral: 'badge-neutral' }; return `<span class="badge ${colors[tone] || colors.neutral}">${esc(label)}</span>`; }
       function renderDrogaria() {
+        state.drogaria = state.drogaria || { config: { storeName: 'Drogaria', attentionPercent: 130, preExpiryDays: 90 }, products: [] };
+        state.drogaria.config = { storeName: 'Drogaria', attentionPercent: 130, preExpiryDays: 90, ...(state.drogaria.config || {}) };
+        state.drogaria.products = Array.isArray(state.drogaria.products) ? state.drogaria.products : [];
         const products = state.drogaria.products || [];
         const counts = { COMPRAR: 0, ATENCAO: 0, PRE_VENCIDO: 0, VENCIDO: 0 };
         products.forEach(item => { const stock = pharmacyStockStatus(item); const expiry = pharmacyExpiryStatus(item); if (counts[stock] !== undefined) counts[stock]++; if (counts[expiry] !== undefined) counts[expiry]++; });
