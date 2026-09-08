@@ -4,7 +4,7 @@
   "private": true,
   "description": "Controle de caixa com backend em Vercel Functions + Postgres",
   "scripts": {
-    "build": "echo 'Static frontend: no bundling required'",
+    "build": "rm -rf public && mkdir -p public && cp index.html public/index.html",
     "check": "node --check api/_lib/auth.js && node --check api/_lib/db.js && node --check api/auth/login.js && node --check api/auth/register.js && node --check api/state.js && node --check api/extract-entry.js"
   },
   "dependencies": {
