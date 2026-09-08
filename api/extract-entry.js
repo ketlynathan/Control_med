@@ -2,7 +2,7 @@ const { getAuthBusinessId } = require('./_lib/auth');
 
 // Groq exposes an OpenAI-compatible Chat Completions API.
 const TEXT_MODEL = 'llama-3.3-70b-versatile';
-const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
+const VISION_MODEL = 'qwen/qwen3.6-27b';
 
 const ENTRY_CATEGORIES = ['Vendas', 'Serviços', 'Recebimento de cliente', 'Aporte', 'Outras entradas'];
 const EXIT_CATEGORIES = ['Mercadoria', 'Fornecedores', 'Aluguel', 'Folha e pró-labore', 'Impostos', 'Marketing', 'Taxas bancárias', 'Contas e serviços', 'Manutenção', 'Outras saídas'];
