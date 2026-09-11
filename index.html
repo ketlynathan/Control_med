@@ -577,7 +577,7 @@
         qs('#pasteImage').value = '';
         qs('#pasteError').className = 'auth-error';
         const btn = qs('#pasteInterpret');
-        btn.disabled = false; btn.textContent = '✨ Interpretar com IA';
+        btn.disabled = false; btn.textContent = '✨ Interpretar nota';
         showModal('pasteModal');
         setTimeout(() => qs('#pasteText').focus(), 30);
       });
@@ -601,7 +601,7 @@
           errorEl.textContent = err.message;
           errorEl.className = 'auth-error show';
         } finally {
-          btn.disabled = false; btn.textContent = '✨ Interpretar com IA';
+          btn.disabled = false; btn.textContent = '✨ Interpretar nota';
         }
       });
 

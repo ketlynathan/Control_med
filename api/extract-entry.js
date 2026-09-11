@@ -1,7 +1,6 @@
 const { getAuthBusinessId } = require('./_lib/auth');
 
 // Groq exposes an OpenAI-compatible Chat Completions API.
-const TEXT_MODEL = 'llama-3.3-70b-versatile';
 const VISION_MODEL = 'qwen/qwen3.6-27b';
 
 const ENTRY_CATEGORIES = ['Vendas', 'Serviços', 'Recebimento de cliente', 'Aporte', 'Outras entradas'];
@@ -32,6 +31,21 @@ function safeParseJSON(raw) {
   return JSON.parse(cleaned);
 }
 
+function parsePastedText(text) {
+  const value = String(text || '').trim();
+  const normalized = value.toLowerCase();
+  const dateMatch = value.match(/\b(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})\b/);
+  const date = dateMatch ? `${dateMatch[3].length === 2 ? `20${dateMatch[3]}` : dateMatch[3]}-${String(dateMatch[2]).padStart(2, '0')}-${String(dateMatch[1]).padStart(2, '0')}` : null;
+  const amountMatches = [...value.matchAll(/(?:r\$\s*)?(\d{1,3}(?:\.\d{3})*,\d{2}|\d+[\.,]\d{2})/gi)];
+  const amountRaw = amountMatches.length ? amountMatches[amountMatches.length - 1][1] : '';
+  const amount = Number(amountRaw.replace(/\./g, '').replace(',', '.'));
+  const type = /recebimento|venda realizada|valor recebido|total recebido/i.test(value) ? 'entrada' : 'saida';
+  const category = /aluguel|locação/i.test(normalized) ? 'Aluguel' : /imposto|das|tributo|icms|iss/i.test(normalized) ? 'Impostos' : /salário|folha|pró-labore/i.test(normalized) ? 'Folha e pró-labore' : /energia|luz|água|internet|telefone|conta de/i.test(normalized) ? 'Contas e serviços' : type === 'entrada' ? 'Outras entradas' : /fornecedor|distribuidora|medicamento|produto|mercadoria|nota fiscal/i.test(normalized) ? 'Mercadoria' : 'Outras saídas';
+  const paymentMethod = /pix/i.test(normalized) ? 'pix' : /cart[aã]o|cr[eé]dito|d[eé]bito/i.test(normalized) ? 'cartao' : /dinheiro|esp[eé]cie/i.test(normalized) ? 'dinheiro' : /transfer[eê]ncia/i.test(normalized) ? 'transferencia' : 'outro';
+  const firstUsefulLine = value.split(/\r?\n/).map(line => line.trim()).find(line => line.length > 2 && !/^\d/.test(line)) || 'Lançamento informado manualmente';
+  return { type, description: firstUsefulLine.slice(0, 120), amount: Number.isFinite(amount) && amount > 0 ? amount : null, date, category, paymentMethod, confidence: amount ? 'media' : 'baixa', notes: amount ? 'Interpretado localmente a partir do texto colado. Confira os campos antes de salvar.' : 'Não foi identificado um valor no texto. Confira os campos antes de salvar.' };
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -56,6 +70,9 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'A imagem é muito grande. Envie uma foto de até 6 MB.' });
   }
 
+  if (!cleanImage) {
+    return res.status(200).json({ suggestion: parsePastedText(cleanText) });
+  }
   if (!process.env.GROQ_API_KEY) {
     return res.status(500).json({ error: 'GROQ_API_KEY não está configurada nas variáveis de ambiente da Vercel.' });
   }
