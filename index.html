@@ -571,7 +571,7 @@
       qs('#collaboratorAdd').addEventListener('click',()=>openCollaboratorEditor());
       qs('#collaboratorsList').addEventListener('click',e=>{const btn=e.target.closest('.collaborator-edit');if(!btn)return;const collaborator=state.collaborators.find(c=>c.id===btn.dataset.id);if(collaborator)openCollaboratorEditor(collaborator);});
       qs('#collaboratorForm').addEventListener('submit',e=>{e.preventDefault();const id=qs('#collabId').value;const code=qs('#collabCode').value.trim();if(!/^\d{4,8}$/.test(code)){notify('Use um código numérico entre 4 e 8 dígitos.','error');return;}const data={name:qs('#collabName').value.trim(),role:qs('#collabRole').value.trim()||'Colaborador',code};if(!data.name){notify('Informe o nome do colaborador.','error');return;}const existing=state.collaborators.find(c=>c.id===id);if(existing)Object.assign(existing,data);else state.collaborators.push({id:uid(),...data});saveState();closeModal('collaboratorModal');updateAll();notify(existing?'Colaborador atualizado.':'Colaborador adicionado.');});
-      qs('#backupExport').addEventListener('click',exportJSON); qs('#backupImport').addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const imported=JSON.parse(reader.result);if(!imported.transactions||!imported.business)throw new Error('Arquivo inválido.');state={...defaultState(),...imported};saveState();updateAll();notify('Backup restaurado com sucesso.');}catch(err){notify('Não foi possível restaurar este backup.','error');}};reader.readAsText(file);e.target.value='';});
+      qs('#backupExport').addEventListener('click',exportJSON); qs('#backupImport').addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const imported=JSON.parse(reader.result);if(!imported.transactions||!imported.business)throw new Error('Arquivo inválido.');const preservedPayables=state.payables;state={...defaultState(),...imported,payables:imported.payables||preservedPayables||defaultState().payables};saveState();updateAll();notify('Backup restaurado com sucesso.');}catch(err){notify('Não foi possível restaurar este backup.','error');}};reader.readAsText(file);e.target.value='';});
       qs('#clearAllData').addEventListener('click',()=>{if(confirm('Isso apagará lançamentos, anexos, fundos e fechamentos deste navegador. Deseja continuar?')){state=defaultState();saveState();updateAll();notify('Dados locais limpos.');}});
       qs('#globalSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){navigate('movements');setValue('movementSearch',e.target.value);renderMovements();}});
       qs('#pasteAdd').addEventListener('click', () => {
@@ -679,9 +679,13 @@
         hideAuthOverlay();
         const acc = qs('#accountEmail'); if (acc) acc.textContent = localStorage.getItem(AUTH_EMAIL_KEY) || '—';
         try {
+          const localStateBeforeSync = loadState();
           const { state: serverState } = await apiFetch('/api/state');
           if (serverState) {
             const base = defaultState();
+            const localPayables = localStateBeforeSync.payables?.entries || [];
+            const serverPayables = serverState.payables?.entries || [];
+            const recoveredLocalPayables = !serverPayables.length && localPayables.length > 0;
             state = {
               ...base, ...serverState,
               business: { ...base.business, ...(serverState.business || {}) },
@@ -690,8 +694,10 @@
               collaborators: serverState.collaborators?.length ? serverState.collaborators : base.collaborators,
               transactions: serverState.transactions || [], openings: serverState.openings || [],
               closings: serverState.closings || [], auditLog: serverState.auditLog || [],
+              payables: serverPayables.length ? serverState.payables : (localStateBeforeSync.payables || base.payables),
             };
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            if (recoveredLocalPayables) await syncStateToServer();
             setSyncStatus('synced');
           } else {
             // Conta nova sem estado salvo ainda: envia o estado local (ou o padrão) como ponto de partida.
