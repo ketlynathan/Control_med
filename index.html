@@ -359,7 +359,7 @@
         if (!authToken) return;
         setSyncStatus('saving');
         clearTimeout(syncTimer);
-        syncTimer = setTimeout(syncStateToServer, 900);
+        syncTimer = setTimeout(syncStateToServer, 350);
       }
 
       async function apiFetch(path, opts = {}) {
@@ -391,11 +391,14 @@
 
       async function syncStateToServer() {
         try {
+          if (!authToken) return;
           await apiFetch('/api/state', { method: 'PUT', body: JSON.stringify({ state }) });
           setSyncStatus('synced');
         } catch (err) {
           setSyncStatus('error');
-          notify('Não sincronizado: ' + err.message + ' (os dados continuam salvos neste navegador)', 'error');
+          notify('Não sincronizado: ' + err.message + '. Tentaremos novamente em 5 segundos.', 'error');
+          clearTimeout(syncTimer);
+          syncTimer = setTimeout(syncStateToServer, 5000);
         }
       }
       function notify(message, type='success') { const el = qs('#toast'); el.textContent = message; el.className = 'toast show ' + type; clearTimeout(toastTimer); toastTimer = setTimeout(() => el.className = 'toast', 3200); }
