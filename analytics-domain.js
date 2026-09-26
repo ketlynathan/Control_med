@@ -28,6 +28,23 @@
     return { amountCents: cents(first.amount), source: 'initial-fund', sourceDate: first.date, sourceId: first.id || null, repeatedOpeningCount: eligibleOpenings.length - 1 };
   }
 
+  function buildRegisterSummary(state = {}) {
+    const transactions = Array.isArray(state.transactions) ? state.transactions : [];
+    const closings = Array.isArray(state.closings) ? state.closings : [];
+    const openings = Array.isArray(state.openings) ? state.openings : [];
+    const movementEntriesCents = sumCents(transactions.filter(row => row.type === 'entrada'), row => row.amount);
+    const movementExitsCents = sumCents(transactions.filter(row => row.type === 'saida'), row => row.amount);
+    const closingEntriesCents = sumCents(closings, row => row.entryTotal ?? (Number(row.pix || 0) + Number(row.debit || 0) + Number(row.credit || 0) + Number(row.cash || 0)));
+    const closingExitsCents = closings.reduce((total, row) => {
+      const details = Array.isArray(row.expenses) ? row.expenses : [];
+      return total + (details.length ? sumCents(details, expense => expense.amount) : cents(row.exitTotal));
+    }, 0);
+    const lastFund = openings.slice().sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')) || String(b.id || '').localeCompare(String(a.id || '')))[0] || null;
+    const entriesCents = movementEntriesCents + closingEntriesCents;
+    const exitsCents = movementExitsCents + closingExitsCents;
+    return { movementEntriesCents, closingEntriesCents, entriesCents, movementExitsCents, closingExitsCents, exitsCents, balanceCents: entriesCents - exitsCents, lastFund };
+  }
+
   function buildModuleMetrics(state, ledgerRows, filters = {}, today = new Date().toISOString().slice(0, 10), categoryOf = row => clean(row.category) || 'Sem categoria') {
     const range = filters.range || { start: '', end: '' };
     const user = filters.user || 'all';
@@ -143,7 +160,7 @@
     };
   }
 
-  const api = { cents, amount, getCashBaseForClosing, buildModuleMetrics };
+  const api = { cents, amount, getCashBaseForClosing, buildRegisterSummary, buildModuleMetrics };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.FinanceAnalytics = api;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
