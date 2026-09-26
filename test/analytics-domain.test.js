@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { cents, getCashBaseForClosing, buildModuleMetrics } = require('../analytics-domain');
+const { cents, getCashBaseForClosing, buildRegisterSummary, buildModuleMetrics } = require('../analytics-domain');
 
 const state = {
   transactions: [
@@ -39,6 +39,25 @@ const ledger = [
 test('converte dinheiro para centavos sem somar floats', () => {
   assert.equal(cents(0.1) + cents(0.2), 30);
   assert.equal(cents('271.14'), 27114);
+});
+
+test('cards combinam entradas e saídas por origem, evitam duplicar detalhe e mostram um único fundo recente', () => {
+  const result = buildRegisterSummary({
+    transactions: [{ type: 'entrada', amount: 10 }, { type: 'saida', amount: 20 }],
+    closings: [
+      { entryTotal: 100, exitTotal: 50, expenses: [{ amount: 30 }, { amount: 20 }] },
+      { entryTotal: 25, exitTotal: 10, expenses: [] },
+    ],
+    openings: [
+      { id: 'old', date: '2026-09-01', amount: 500 },
+      { id: 'latest', date: '2026-09-25', amount: 114, register: '1' },
+    ],
+  });
+  assert.equal(result.entriesCents, 13500);
+  assert.equal(result.exitsCents, 8000);
+  assert.equal(result.balanceCents, 5500);
+  assert.equal(result.lastFund.id, 'latest');
+  assert.equal(result.lastFund.amount, 114);
 });
 
 test('base do fechamento usa a contagem mais recente, não soma fundos diários', () => {
