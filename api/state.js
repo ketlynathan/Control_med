@@ -16,19 +16,27 @@ module.exports = async (req, res) => {
   try {
     if (req.method === 'GET') {
       const result = await pool.query(
-        'SELECT state, updated_at FROM business_state WHERE business_id = $1',
+        `SELECT state, updated_at,
+                xmin::text AS version
+         FROM business_state WHERE business_id = $1`,
         [businessId]
       );
       if (!result.rows.length) {
-        return res.status(200).json({ state: null, updatedAt: null });
+        return res.status(200).json({ state: null, updatedAt: null, version: null });
       }
-      return res.status(200).json({ state: result.rows[0].state, updatedAt: result.rows[0].updated_at });
+      return res.status(200).json({ state: result.rows[0].state, updatedAt: result.rows[0].updated_at, version: result.rows[0].version });
     }
 
     if (req.method === 'PUT') {
-      const { state } = req.body || {};
+      const { state, version } = req.body || {};
       if (!state || typeof state !== 'object') {
         return res.status(400).json({ error: 'Estado inválido.' });
+      }
+      if (!Object.prototype.hasOwnProperty.call(req.body || {}, 'version')) {
+        return res.status(409).json({ error: 'Esta versão do aplicativo não informa a versão dos dados. Recarregue a página para sincronizar com segurança.' });
+      }
+      if (version !== null && (typeof version !== 'string' || !/^\d{1,10}$/.test(version))) {
+        return res.status(400).json({ error: 'Versão de sincronização inválida.' });
       }
 
       const json = JSON.stringify(state);
@@ -38,15 +46,31 @@ module.exports = async (req, res) => {
         });
       }
 
-      await pool.query(
-        `INSERT INTO business_state (business_id, state, updated_at)
-         VALUES ($1, $2, now())
-         ON CONFLICT (business_id)
-         DO UPDATE SET state = EXCLUDED.state, updated_at = now()`,
-        [businessId, state]
-      );
+      const result = version === null
+        ? await pool.query(
+          `INSERT INTO business_state (business_id, state, updated_at)
+           VALUES ($1, $2, now())
+           ON CONFLICT (business_id) DO NOTHING
+           RETURNING xmin::text AS version`,
+          [businessId, state]
+        )
+        : await pool.query(
+          `UPDATE business_state SET state = $2, updated_at = now()
+           WHERE business_id = $1 AND xmin::text = $3
+           RETURNING xmin::text AS version`,
+          [businessId, state, version]
+        );
 
-      return res.status(200).json({ ok: true, updatedAt: new Date().toISOString() });
+      if (!result.rows.length) {
+        const current = await pool.query(
+          `SELECT xmin::text AS version
+           FROM business_state WHERE business_id = $1`,
+          [businessId]
+        );
+        return res.status(409).json({ error: 'Os dados foram atualizados em outro dispositivo. Sua versão local foi preservada neste navegador; carregue a versão mais recente antes de continuar.', version: current.rows[0]?.version || null });
+      }
+
+      return res.status(200).json({ ok: true, updatedAt: result.rows[0].version, version: result.rows[0].version });
     }
 
     res.setHeader('Allow', 'GET, PUT');
