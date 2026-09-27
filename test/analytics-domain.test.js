@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { cents, getCashBaseForClosing, buildRegisterSummary, buildModuleMetrics } = require('../analytics-domain');
+const { readFileSync } = require('node:fs');
+const { cents, getCashBaseForClosing, calculateClosingCashReconciliation, buildFinancialLedger, filterFinancialLedger, buildRegisterSummary, buildModuleMetrics } = require('../analytics-domain');
 
 const state = {
   transactions: [
@@ -41,9 +42,9 @@ test('converte dinheiro para centavos sem somar floats', () => {
   assert.equal(cents('271.14'), 27114);
 });
 
-test('cards combinam entradas e saídas por origem, evitam duplicar detalhe e mostram um único fundo recente', () => {
+test('cards do Caixa excluem Lançamentos, detalham apenas saídas próprias e mostram um único fundo recente', () => {
   const result = buildRegisterSummary({
-    transactions: [{ type: 'entrada', amount: 10 }, { type: 'saida', amount: 20 }],
+    transactions: [{ id: 'outside-in', type: 'entrada', amount: 10 }, { id: 'outside-out', type: 'saida', amount: 20 }],
     closings: [
       { entryTotal: 100, exitTotal: 50, expenses: [{ amount: 30 }, { amount: 20 }] },
       { entryTotal: 25, exitTotal: 10, expenses: [] },
@@ -53,9 +54,11 @@ test('cards combinam entradas e saídas por origem, evitam duplicar detalhe e mo
       { id: 'latest', date: '2026-09-25', amount: 114, register: '1' },
     ],
   });
-  assert.equal(result.entriesCents, 13500);
-  assert.equal(result.exitsCents, 8000);
-  assert.equal(result.balanceCents, 5500);
+  assert.equal(result.cashEntriesCents, 12500);
+  assert.equal(result.cashExitsCents, 6000);
+  assert.equal(result.cashBalanceCents, 6500);
+  assert.equal(result.movementEntriesCents, 1000);
+  assert.equal(result.movementExitsCents, 2000);
   assert.equal(result.lastFund.id, 'latest');
   assert.equal(result.lastFund.amount, 114);
 });
@@ -73,9 +76,11 @@ test('base do fechamento usa a contagem mais recente, não soma fundos diários'
   ];
   assert.deepEqual(getCashBaseForClosing(closings, openings, '1', '2026-09-22'), {
     amountCents: 13545, source: 'previous-count', sourceDate: '2026-09-21', sourceId: 'c2', repeatedOpeningCount: 0,
+    incrementalFundCents: 0, pendingFundCents: 0, includedFundIds: [], pendingFundIds: [],
   });
   assert.deepEqual(getCashBaseForClosing([], openings, '1', '2026-09-22'), {
     amountCents: 5000, source: 'initial-fund', sourceDate: '2026-09-10', sourceId: 'f1', repeatedOpeningCount: 2,
+    incrementalFundCents: 0, pendingFundCents: 18000, includedFundIds: [], pendingFundIds: ['f2', 'f3'],
   });
   assert.equal(getCashBaseForClosing([], [], 'new', '2026-09-22').source, 'zero-unconfirmed');
 });
@@ -123,4 +128,118 @@ test('sinaliza responsáveis ausentes, reconciliação pendente e fechamento sem
   assert.equal(result.integrity.closingWithoutPriorCount.length, 1);
   assert.equal(result.integrity.inconsistentStoredDifference.length, 0);
   assert.equal(state.transactions[0].collaborator, '');
+});
+
+test('ledger produz entradas por meio e mantém uma única ocorrência para duplicidade exata com vínculos', () => {
+  const input = {
+    transactions: [{ id: 'tx-sale', date: '2026-09-22', type: 'saida', amount: 12.5, description: 'Uber', register: '1', collaborator: 'u1', paymentMethod: 'dinheiro' }],
+    closings: [{ id: 'close-22', date: '2026-09-22', register: '1', collaborator: 'u1', pix: 25, debit: 12.5, credit: 5, cash: 10, entryTotal: 52.5, exitTotal: 12.5, expenses: [{ description: 'Uber', amount: 12.5, paymentMethod: 'dinheiro' }] }],
+    openings: [],
+  };
+  const ledger = buildFinancialLedger(input);
+  assert.deepEqual(ledger.paymentTotalsCents, { pix: 2500, debit: 1250, credit: 500, cash: 1000, card_unspecified: 0, transferencia: 0, outro: 0, nao_informado: 0 });
+  assert.equal(ledger.totals.cashEntriesCents, 5250);
+  assert.equal(ledger.totals.cashExitsCents, 1250);
+  assert.equal(ledger.totals.movementEntriesCents, 0);
+  assert.equal(ledger.totals.movementExitsCents, 1250);
+  assert.equal(ledger.possibleDuplicates.length, 1);
+  assert.equal(ledger.totals.duplicatePendingCents, 1250);
+  assert.equal(ledger.confirmedRecords.filter(row => row.type === 'saida').length, 2);
+  assert.equal(ledger.possibleDuplicates[0].transactionIds[0], 'tx-sale');
+  assert.equal(ledger.possibleDuplicates[0].closingId, 'close-22');
+  assert.equal(ledger.records.find(row => row.id === 'closing:close-22:entry:pix').relatedClosingId, 'close-22');
+});
+
+test('filtro canônico por período, caixa, categoria e tipo conserva totais em centavos', () => {
+  const ledger = buildFinancialLedger({
+    transactions: [{ id: 'tx1', date: '2026-09-22', type: 'saida', amount: 14.25, description: 'Gasolina', category: '', register: '1', collaborator: 'u1', paymentMethod: 'pix' }, { id: 'tx2', date: '2026-09-23', type: 'entrada', amount: 50, description: 'Venda', register: '2', collaborator: 'u2', paymentMethod: 'dinheiro' }],
+    closings: [], openings: [],
+  });
+  const result = filterFinancialLedger(ledger, { range: { start: '2026-09-22', end: '2026-09-22' }, register: '1', user: 'u1', type: 'saida', category: 'Transporte' });
+  assert.equal(result.records.length, 1);
+  assert.equal(result.movementExitsCents, 1425);
+  assert.equal(result.movementBalanceCents, -1425);
+  assert.equal(result.cashExitsCents, 0);
+});
+
+test('fundo igual à contagem anterior fica carregado e nunca é somado novamente', () => {
+  const input = {
+    closings: [{ id: 'prior', date: '2026-09-21', register: '1', actual: 21.75 }],
+    openings: [{ id: 'carry', date: '2026-09-22', register: '1', amount: 21.75, ledgerDisposition: 'carry-forward' }],
+  };
+  const ledger = buildFinancialLedger(input);
+  assert.equal(ledger.totals.fundsCents, 0);
+  assert.equal(ledger.records.find(row => row.id === 'fund:carry').status, 'carried_forward');
+  const base = getCashBaseForClosing(input.closings, input.openings, '1', '2026-09-23');
+  assert.equal(base.amountCents, 2175);
+  assert.equal(base.incrementalFundCents, 0);
+  assert.equal(base.pendingFundCents, 0);
+});
+
+test('fundo histórico sem proveniência fica pendente e não entra no saldo como receita presumida', () => {
+  const ledger = buildFinancialLedger({ closings: [{ id: 'prior', date: '2026-09-21', register: '1', actual: 21.75 }], openings: [{ id: 'unknown', date: '2026-09-22', register: '1', amount: 21.75 }] });
+  assert.equal(ledger.totals.fundsCents, 0);
+  assert.equal(ledger.totals.pendingFundCents, 2175);
+});
+
+test('21/09 usa última contagem e só subtrai a compra multirão confirmada em dinheiro', () => {
+  const criticalClosing = { id: 'critical-21', date: '2026-09-21', register: '1', actual: 21.75, pix: 120.99, debit: 54, credit: 92, cash: 45.75, entryTotal: 312.74, exitTotal: 1779.99, expenses: [
+    { description: 'Dona Betty', amount: 100 }, { description: 'almoço', amount: 34 }, { description: 'Merenda', amount: 40 },
+    { description: 'Gasolina', amount: 20 }, { description: 'Uber', amount: 30 }, { description: 'Compras (multirão)', amount: 1145 },
+    { description: 'compras', amount: 69 }, { description: 'compras', amount: 202.79 }, { description: 'compras', amount: 139.2 },
+  ] };
+  const historical = { closings: [{ id: 'prior-count', date: '2026-09-20', register: '1', actual: 153.75 }, criticalClosing], openings: [], transactions: [
+    { id: 'unrelated-entry', date: '2026-09-21', register: '1', type: 'entrada', amount: 900, description: 'Lançamento fora do Caixa', paymentMethod: 'cash' },
+    { id: 'unrelated-exit', date: '2026-09-21', register: '1', type: 'saida', amount: 200, description: 'Saída fora do Caixa', paymentMethod: 'cash' },
+  ], financialReconciliation: { expensePaymentMethodById: { 'closing-expense:critical-21:5': 'cash' } } };
+  const result = calculateClosingCashReconciliation(historical, criticalClosing);
+  assert.equal(result.baseCents, 15375);
+  assert.equal(result.cashEntryCents, 4575);
+  assert.equal(result.cashExpenseCents, 114500);
+  assert.equal(result.unknownOutflowCents, 63499);
+  assert.equal(result.expectedCents, -94550);
+  assert.equal(result.actualCents, 2175);
+  assert.equal(result.differenceCents, 96725);
+  assert.equal(result.provisional, true);
+});
+
+test('candidato a duplicidade com Lançamentos não remove despesa do Caixa nem altera esperado físico', () => {
+  const closing = { id: 'same-day', date: '2026-09-21', register: '1', actual: 25, cash: 0, entryTotal: 0, exitTotal: 100, expenses: [{ description: 'Mercadoria', amount: 100, paymentMethod: 'cash' }] };
+  const result = calculateClosingCashReconciliation({ closings: [{ id: 'prior', date: '2026-09-20', register: '1', actual: 125 }, closing], openings: [], transactions: [{ id: 'manual', date: '2026-09-21', register: '1', type: 'saida', amount: 100, description: 'Mercadoria', paymentMethod: 'cash' }] }, closing);
+  assert.equal(result.cashExpenseCents, 10000);
+  assert.equal(result.expectedCents, 2500);
+  assert.equal(result.actualCents, 2500);
+});
+
+test('Caixa, Lançamentos, Contas, Estoque e Convênio permanecem fontes separadas no ledger central', () => {
+  const source = {
+    closings: [{ id: 'cash1', date: '2026-09-22', register: '1', actual: 18, entryTotal: 40, pix: 20, cash: 20, exitTotal: 7, expenses: [{ description: 'Merenda', amount: 7, paymentMethod: 'cash' }] }],
+    transactions: [{ id: 'manual1', date: '2026-09-22', type: 'saida', amount: 4.5, description: 'Compra', paymentMethod: 'pix', register: '1' }],
+    openings: [],
+    payables: { entries: [{ id: 'pay', supplier: 'Fornecedor', amount: 30, dueDate: '2026-09-25', paid: false }] },
+    drogaria: { products: [{ id: 'stock', name: 'Produto', currentStock: 4, minimumStock: 1 }] },
+    convenio: { entries: [{ id: 'conv', date: '2026-09-22', productName: 'Produto', quantity: 2, unitPrice: 5, total: 10 }] },
+  };
+  const ledger = buildFinancialLedger(source);
+  assert.ok(ledger.records.some(row => row.sourceModule === 'payables' && row.id === 'payable:pay'));
+  assert.ok(ledger.records.some(row => row.sourceModule === 'inventory' && row.id === 'inventory:stock'));
+  assert.ok(ledger.records.some(row => row.sourceModule === 'convenio' && row.id === 'convenio:conv'));
+  const result = buildModuleMetrics(source, [], { range: { start: '', end: '' }, module: 'cash' }, '2026-09-26');
+  assert.equal(result.cash.entries, 4000);
+  assert.equal(result.cash.totalExits, 700);
+  assert.equal(result.cash.balance, 3300);
+  assert.equal(result.movements.count, 0);
+  assert.equal(result.payables.openTotal, 3000);
+  assert.equal(result.inventory.productCount, 1);
+  assert.equal(result.convenio.total, 1000);
+});
+
+test('interface Caixa não lista Lançamentos nem permite apagar fechamentos históricos', () => {
+  const html = readFileSync(require.resolve('../index.html'), 'utf8');
+  const cashPage = html.slice(html.indexOf('<section class="page" id="page-register">'), html.indexOf('<section class="page" id="page-analytics">'));
+  const cashCards = html.slice(html.indexOf('function renderCashCards()'), html.indexOf('function movementTable('));
+  assert.ok(cashPage.length > 0);
+  assert.doesNotMatch(cashPage, /Lançamentos|registerUserSummary|registerMovementHistory|delete-closing/);
+  assert.doesNotMatch(cashCards, /state\.transactions|Movimentos registrados|lançamento\(s\)/);
+  assert.doesNotMatch(html, /closingsTable'\)\.addEventListener\('click'/);
 });

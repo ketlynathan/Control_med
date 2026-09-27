@@ -1,5 +1,6 @@
 const { getPool } = require('./_lib/db');
 const { getAuthBusinessId } = require('./_lib/auth');
+const { buildFinancialLedger } = require('../analytics-domain');
 
 // Vercel serverless functions (Node runtime) reject request bodies above ~4.5MB.
 // We keep a safety margin because anexos (attachments) are stored as base64 inside the JSON state.
@@ -24,7 +25,9 @@ module.exports = async (req, res) => {
       if (!result.rows.length) {
         return res.status(200).json({ state: null, updatedAt: null, version: null });
       }
-      return res.status(200).json({ state: result.rows[0].state, updatedAt: result.rows[0].updated_at, version: result.rows[0].version });
+      const state = result.rows[0].state || {};
+      const synchronizedState = { ...state, financialMovements: buildFinancialLedger(state).records };
+      return res.status(200).json({ state: synchronizedState, updatedAt: result.rows[0].updated_at, version: result.rows[0].version });
     }
 
     if (req.method === 'PUT') {
@@ -39,7 +42,10 @@ module.exports = async (req, res) => {
         return res.status(400).json({ error: 'Versão de sincronização inválida.' });
       }
 
-      const json = JSON.stringify(state);
+      // Keep the historical module arrays intact, but derive one canonical movement layer
+      // on every write so every device reads the same links, types, and integer-cent values.
+      const synchronizedState = { ...state, financialMovements: buildFinancialLedger(state).records };
+      const json = JSON.stringify(synchronizedState);
       if (Buffer.byteLength(json, 'utf8') > MAX_STATE_BYTES) {
         return res.status(413).json({
           error: 'Os dados ficaram grandes demais para sincronizar (limite ~4MB). Isso geralmente acontece por causa de anexos (fotos/PDFs). Remova anexos antigos ou reduza o tamanho das imagens.',
@@ -52,13 +58,13 @@ module.exports = async (req, res) => {
            VALUES ($1, $2, now())
            ON CONFLICT (business_id) DO NOTHING
            RETURNING xmin::text AS version`,
-          [businessId, state]
+          [businessId, synchronizedState]
         )
         : await pool.query(
           `UPDATE business_state SET state = $2, updated_at = now()
            WHERE business_id = $1 AND xmin::text = $3
            RETURNING xmin::text AS version`,
-          [businessId, state, version]
+          [businessId, synchronizedState, version]
         );
 
       if (!result.rows.length) {
