@@ -35,7 +35,8 @@ test('GET devolve o estado e uma versão que o cliente pode comparar', async () 
   const res = response();
   await route({ method: 'GET', headers: {} }, res);
   assert.equal(res.statusCode, 200);
-  assert.deepEqual(res.body.state, { transactions: [] });
+  assert.deepEqual(res.body.state.transactions, []);
+  assert.deepEqual(res.body.state.financialMovements, []);
   assert.equal(res.body.version, version);
 });
 
@@ -46,7 +47,9 @@ test('PUT atualiza apenas se a versão xmin ainda for igual à versão lida', as
     assert.match(sql, /UPDATE business_state SET state = \$2, updated_at = now\(\)/);
     assert.match(sql, /xmin::text = \$3/);
     assert.equal(values[0], 'test-business');
-    assert.deepEqual(values[1], { transactions: [{ id: 'new' }] });
+    assert.deepEqual(values[1].transactions, [{ id: 'new' }]);
+    assert.ok(Array.isArray(values[1].financialMovements));
+    assert.equal(values[1].financialMovements[0].id, 'transaction:new');
     assert.equal(values[2], version);
     return { rows: [{ version: '424243' }] };
   };
