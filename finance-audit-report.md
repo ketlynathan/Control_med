@@ -48,7 +48,7 @@ A soma das entradas por Pix, débito, crédito e dinheiro coincide exatamente co
 
 O registro fornecido foi localizado na fonte de produção: Caixa 01, Dra. Suelem, entrada R$ 418,18 (Pix R$ 127,99; débito R$ 133,45; crédito R$ 7,99; dinheiro R$ 148,75), duas despesas detalhadas (Compras chiclete R$ 15,00 e Almoço R$ 20,00), total de saídas R$ 35,00, esperado original R$ 228,50, contado R$ 264,50 e diferença +R$ 36,00. O usuário e os valores foram mantidos como informados. Este fechamento é o 23º ativo e está incluído nos números acima; não foi apagado nem regravado.
 
-Há um fundo de abertura de R$ 115,75 na manhã de 26/09. A última contagem anterior do Caixa 01 era R$ 114,75 em 24/09. O esperado salvo de R$ 228,50 corresponde exatamente a `R$ 114,75 + R$ 148,75 − R$ 35,00`, sem acrescentar o fundo de R$ 115,75. A abertura permanece pendente de classificação; não a somei nem alterei o esperado original. As despesas de R$ 15,00 e R$ 20,00 também não têm método de pagamento explícito, então a interface mantém o recálculo físico como provisório até confirmar dinheiro versus Pix.
+Há um fundo de abertura de R$ 115,75 na manhã de 26/09. A última contagem anterior do Caixa 01 era R$ 114,75 em 24/09. O esperado salvo de R$ 228,50 corresponde a `R$ 114,75 + R$ 148,75 − R$ 35,00`, assumindo ambas as despesas como espécie e sem acrescentar o fundo de R$ 115,75. Como o método das despesas de R$ 15,00 e R$ 20,00 ainda não foi confirmado, o domínio subtrai **R$ 0,00 confirmado em espécie** e mostra esperado físico provisório de **R$ 263,50**, contado de R$ 264,50 e diferença provisória **+R$ 1,00**. O fundo permanece pendente. Se a usuária confirmar ambas como dinheiro, o esperado proposto volta a R$ 228,50; nada foi sobrescrito.
 
 ## Fechamento crítico de 21/09/2026
 
@@ -70,13 +70,13 @@ O estado original dos módulos continua preservado. O domínio produz `financial
 
 ## Integridade e riscos remanescentes
 
-- 8 de 22 esperados originais são negativos, somando −R$ 2.121,37. Permanecem preservados; o painel apresenta original e recálculo separadamente.
+- 8 dos 22 fechamentos históricos têm esperado original negativo, somando −R$ 2.121,37; o 23º fechamento (26/09) tem esperado original positivo. Permanecem preservados; o painel apresenta original e recálculo separadamente.
 - As 15 aberturas restantes não têm origem classificada; só o fundo de 22/09 foi confirmado como carregamento. Nenhuma abertura desconhecida foi presumida como aporte novo.
 - A coincidência potencial entre lançamento e despesa de fechamento é alerta de revisão, não prova de identidade. Nenhum par foi apagado nem vinculado automaticamente.
 - A soma de entradas do Caixa abrange todos os meios e não é uma contagem de espécie. Para o esperado físico, só dinheiro identificado entra.
 - O recálculo histórico depende de método de pagamento e proveniência dos fundos. Não substituir os esperados/diferenças originais até classificar as pendências.
-- O fechamento de 26/09 já existe no JSON ativo e foi incluído nos totais; suas despesas de R$ 35,00 têm método de pagamento não informado e ficam pendentes para o cálculo físico provisório. O esperado salvo de R$ 228,50 coincide com contagem anterior de R$ 114,75 + espécie de R$ 148,75 − R$ 35,00, mas essa coincidência aritmética não confirma que ambos os itens foram pagos em espécie.
-- Antes da aplicação pública deste código, a API de sincronização recalcula e persiste a projeção central quando o estado é gravado. A migração das tabelas normalizadas não está incluída nesta versão.
+- O fechamento de 26/09 já existe no JSON ativo e foi incluído nos totais; suas despesas de R$ 35,00 têm método de pagamento não informado. Por isso o esperado recalculado fica provisório em R$ 263,50 (diferença +R$ 1,00), enquanto o valor salvo de R$ 228,50 pressupõe que ambos os itens foram pagos em espécie.
+- Código integrado pelo PR [#7](https://github.com/ketlynathan/Control_med/pull/7), commit de merge `660cb915a2ff19ff12b0d6189a6faedb7bf01e99`. A implantação Vercel de produção desse commit concluiu com sucesso; URL: https://control-49i2lm14z-forme10.vercel.app. Homepage respondeu HTTP 200 e `/api/state` sem sessão respondeu HTTP 401. A API recalcula a projeção central na leitura e antes de cada gravação. A migração das tabelas normalizadas não está incluída nesta versão.
 
 ## Validação técnica
 
