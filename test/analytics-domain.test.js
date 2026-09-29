@@ -234,12 +234,14 @@ test('Caixa, Lançamentos, Contas, Estoque e Convênio permanecem fontes separad
   assert.equal(result.convenio.total, 1000);
 });
 
-test('interface Caixa não lista Lançamentos nem permite apagar fechamentos históricos', () => {
+test('interface Caixa não lista Lançamentos e permite apagar fechamentos com auditoria', () => {
   const html = readFileSync(require.resolve('../index.html'), 'utf8');
   const cashPage = html.slice(html.indexOf('<section class="page" id="page-register">'), html.indexOf('<section class="page" id="page-analytics">'));
   const cashCards = html.slice(html.indexOf('function renderCashCards()'), html.indexOf('function movementTable('));
   assert.ok(cashPage.length > 0);
-  assert.doesNotMatch(cashPage, /Lançamentos|registerUserSummary|registerMovementHistory|delete-closing/);
+  assert.doesNotMatch(cashPage, /Lançamentos|registerUserSummary|registerMovementHistory/);
+  assert.match(html, /closing-delete/);
   assert.doesNotMatch(cashCards, /state\.transactions|Movimentos registrados|lançamento\(s\)/);
-  assert.doesNotMatch(html, /closingsTable'\)\.addEventListener\('click'/);
+  assert.match(html, /closingsTable'\)\.addEventListener\('click'/);
+  assert.match(html, /deleteWithAudit\('closing'/);
 });
