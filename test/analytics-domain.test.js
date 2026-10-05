@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
-const { cents, getCashBaseForClosing, calculateClosingCashReconciliation, buildFinancialLedger, filterFinancialLedger, buildRegisterSummary, buildModuleMetrics } = require('../analytics-domain');
+const { cents, getCashBaseForClosing, calculateClosingCashReconciliation, buildFinancialLedger, filterFinancialLedger, buildRegisterSummary, buildModuleMetrics, canEditClosingToday, buildClosingRevision } = require('../analytics-domain');
 
 const state = {
   transactions: [
@@ -244,4 +244,27 @@ test('interface Caixa não lista Lançamentos e permite apagar fechamentos com a
   assert.doesNotMatch(cashCards, /state\.transactions|Movimentos registrados|lançamento\(s\)/);
   assert.match(html, /closingsTable'\)\.addEventListener\('click'/);
   assert.match(html, /deleteWithAudit\('closing'/);
+  assert.match(html, /canEditClosingToday\(c,todayISO\(\)\)\?`<button class="btn btn-ghost btn-sm closing-edit/);
+  assert.match(html, /canEditClosingToday\(c,todayISO\(\)\)/);
+  assert.match(html, /function startEditClosing\(id\)[\s\S]*?canEditClosingToday\(c, todayISO\(\)\)/);
+  assert.match(html, /function upsertClosing\(obj, coll\)[\s\S]*?canEditClosingToday\(state\.closings\[i\], todayISO\(\)\)/);
+});
+
+test('edição do fechamento só é elegível na mesma data local do caixa', () => {
+  assert.equal(canEditClosingToday({ id: 'today', date: '2026-10-05' }, '2026-10-05'), true);
+  assert.equal(canEditClosingToday({ id: 'yesterday', date: '2026-10-04' }, '2026-10-05'), false);
+  assert.equal(canEditClosingToday({ date: '2026-10-05' }, '2026-10-05'), false);
+  assert.equal(canEditClosingToday(null, '2026-10-05'), false);
+});
+
+test('retificação mantém a versão anterior, ID e data de criação do fechamento', () => {
+  const original = { id: 'closing-1', date: '2026-10-05', entryTotal: 100, actual: 100, createdAt: '2026-10-05T16:00:00Z' };
+  const revision = buildClosingRevision(original, { entryTotal: 140, actual: 140 }, '2026-10-05T17:00:00Z');
+  assert.equal(original.entryTotal, 100);
+  assert.equal(revision.before.entryTotal, 100);
+  assert.equal(revision.after.entryTotal, 140);
+  assert.equal(revision.after.id, original.id);
+  assert.equal(revision.after.createdAt, original.createdAt);
+  assert.equal(revision.after.revision, 1);
+  assert.equal(revision.after.updatedAt, '2026-10-05T17:00:00Z');
 });
