@@ -537,7 +537,18 @@
     };
   }
 
-  const api = { cents, amount, inferExpenseCategory, buildFinancialLedger, filterFinancialLedger, getCashBaseForClosing, calculateClosingCashReconciliation, buildRegisterSummary, buildModuleMetrics, expenseCategories };
+  function canEditClosingToday(closing, today = new Date().toISOString().slice(0, 10)) {
+    return !!closing && !!clean(closing.id) && /^\d{4}-\d{2}-\d{2}$/.test(String(closing.date || '')) && closing.date === today;
+  }
+
+  function buildClosingRevision(closing, changes, updatedAt = new Date().toISOString()) {
+    if (!closing || !clean(closing.id)) throw new Error('Fechamento inválido para retificação.');
+    const before = JSON.parse(JSON.stringify(closing));
+    const after = { ...before, ...changes, id: before.id, createdAt: before.createdAt || updatedAt, closedAt: before.closedAt || updatedAt, updatedAt, revision: (Number(before.revision) || 0) + 1 };
+    return { before, after };
+  }
+
+  const api = { cents, amount, inferExpenseCategory, buildFinancialLedger, filterFinancialLedger, getCashBaseForClosing, calculateClosingCashReconciliation, buildRegisterSummary, buildModuleMetrics, canEditClosingToday, buildClosingRevision, expenseCategories };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.FinanceAnalytics = api;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
