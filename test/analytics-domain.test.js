@@ -240,8 +240,8 @@ test('interface Caixa não lista Lançamentos e permite apagar fechamentos com a
   const cashCards = html.slice(html.indexOf('function renderCashCards()'), html.indexOf('function movementTable('));
   const closingHistory = html.slice(html.indexOf("qs('#closingsTable').innerHTML="), html.indexOf("qs('#openingsTable').innerHTML="));
   assert.ok(cashPage.length > 0);
-  assert.doesNotMatch(closingHistory, /Esperado original \/ reconciliação|calculateClosingCashReconciliation|Recalculado:/);
-  for (const header of ['Entradas', 'Saídas', 'Contado', 'Diferença', 'Detalhes']) assert.match(closingHistory, new RegExp(`<th>${header}<\\/th>`));
+  assert.doesNotMatch(closingHistory, /Esperado original \/ reconciliação|calculateClosingCashReconciliation|Recalculado:|Diferença|diffCents/);
+  for (const header of ['Entradas', 'Saídas', 'Contado', 'Detalhes']) assert.match(closingHistory, new RegExp(`<th>${header}<\\/th>`));
   assert.doesNotMatch(cashPage, /Lançamentos|registerUserSummary|registerMovementHistory/);
   assert.match(html, /closing-delete/);
   assert.doesNotMatch(cashCards, /state\.transactions|Movimentos registrados|lançamento\(s\)/);
