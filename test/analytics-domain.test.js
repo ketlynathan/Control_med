@@ -268,3 +268,13 @@ test('retificação mantém a versão anterior, ID e data de criação do fecham
   assert.equal(revision.after.revision, 1);
   assert.equal(revision.after.updatedAt, '2026-10-05T17:00:00Z');
 });
+
+test('Contas a pagar oferece atualização manual sem sair do módulo e preserva sync compartilhado', () => {
+  const html = readFileSync(require.resolve('../index.html'), 'utf8');
+  assert.match(html, /id="payableSyncNow"/);
+  assert.match(html, /qs\('#payableSyncNow'\)\.addEventListener\('click',syncPayablesNow\)/);
+  assert.match(html, /async function syncPayablesNow\(\)[\s\S]*?apiFetch\('\/api\/state'\)/);
+  assert.match(html, /function savePayable\(event\)[\s\S]*?saveState\(\)/);
+  assert.match(html, /function handlePayableAction\(event\)[\s\S]*?saveState\(\)/);
+  assert.match(html, /setInterval\(refreshServerStateIfChanged, 15000\)/);
+});

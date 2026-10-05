@@ -30,13 +30,16 @@ test('GET devolve o estado e uma versão que o cliente pode comparar', async () 
   queryHandler = async sql => {
     assert.match(sql, /SELECT state/);
     assert.match(sql, /AS version/);
-    return { rows: [{ state: { transactions: [] }, version }] };
+    return { rows: [{ state: { transactions: [], payables: { entries: [{ id: 'rent', amount: 1390.45, paid: false }] } }, version }] };
   };
   const res = response();
   await route({ method: 'GET', headers: {} }, res);
   assert.equal(res.statusCode, 200);
   assert.deepEqual(res.body.state.transactions, []);
-  assert.deepEqual(res.body.state.financialMovements, []);
+  assert.deepEqual(res.body.state.payables.entries, [{ id: 'rent', amount: 1390.45, paid: false }]);
+  assert.equal(res.body.state.financialMovements.length, 1);
+  assert.equal(res.body.state.financialMovements[0].sourceModule, 'payables');
+  assert.equal(res.body.state.financialMovements[0].status, 'open_obligation');
   assert.equal(res.body.version, version);
 });
 
@@ -48,13 +51,14 @@ test('PUT atualiza apenas se a versão xmin ainda for igual à versão lida', as
     assert.match(sql, /xmin::text = \$3/);
     assert.equal(values[0], 'test-business');
     assert.deepEqual(values[1].transactions, [{ id: 'new' }]);
+    assert.deepEqual(values[1].payables.entries, [{ id: 'rent', amount: 1390.45, paid: false }]);
     assert.ok(Array.isArray(values[1].financialMovements));
     assert.equal(values[1].financialMovements[0].id, 'transaction:new');
     assert.equal(values[2], version);
     return { rows: [{ version: '424243' }] };
   };
   const res = response();
-  await route({ method: 'PUT', headers: {}, body: { state: { transactions: [{ id: 'new' }] }, version } }, res);
+  await route({ method: 'PUT', headers: {}, body: { state: { transactions: [{ id: 'new' }], payables: { entries: [{ id: 'rent', amount: 1390.45, paid: false }] } }, version } }, res);
   assert.equal(called, true);
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.version, '424243');
