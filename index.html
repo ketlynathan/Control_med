@@ -255,7 +255,16 @@
           <div class="grid-2 equal"><div class="panel"><div class="panel-header"><div><h2>Dias que mais venderam</h2><p>Maiores totais de entrada no mês</p></div></div><div class="table-wrap" id="topDaysTable"></div></div><div class="panel"><div class="panel-header"><div><h2>Dias que menos venderam</h2><p>Menores totais entre os dias com venda registrada</p></div></div><div class="table-wrap" id="bottomDaysTable"></div></div></div>
           <div class="panel" style="margin-bottom:17px"><div class="panel-header"><div><h2>Caixa</h2><p>Contagens, entradas, despesas e fundos registrados exclusivamente no módulo Caixa.</p></div><button class="btn btn-ghost btn-sm" data-page="register">Gerenciar caixas →</button></div><div class="panel-body"><div class="cash-grid" id="cashCards"></div></div></div>
           <div class="panel" style="margin-bottom:17px"><div class="panel-header"><div><h2>Dashboard de vendas por dia</h2><p>Total de vendas informado nos fechamentos do período selecionado</p><span id="salesTrendBadge" class="trend-chip trend-flat">→ Sem histórico suficiente</span></div><button class="btn btn-ghost btn-sm" data-page="register">Registrar venda →</button></div><div class="panel-body"><div class="sales-kpis" id="salesKpis"></div><div class="sales-history-table" id="salesHistoryTable"></div><div class="sales-history-table" id="salesRegisterBreakdown"></div></div></div>
-          <div class="stats-grid" id="statsGrid"></div>
+          <div class="stats-grid" id="costDashKpis"></div>
+<div class="grid-2 equal">
+  <div class="panel"><div class="panel-header"><div><h2>Empréstimos · pago x a pagar por mês</h2><p>Parcelas pagas, projetadas e saldo restante (eixo direito)</p></div><div class="legend"><span><i style="background:#15966b"></i>Pago</span><span><i class="red-dot"></i>A pagar</span><span><i class="blue-dot"></i>Saldo restante</span></div></div><div class="chart-wrap"><canvas id="costEvolutionChart"></canvas></div></div>
+  <div class="panel"><div class="panel-header"><div><h2>Pagamentos da Drogaria</h2><p>Contas pagas no mês por categoria (Empréstimos incluso)</p></div></div><div class="chart-wrap"><canvas id="loanRadarChart"></canvas></div></div>
+</div>
+<div class="grid-2 equal">
+  <div class="panel"><div class="panel-header"><div><h2>Saldo após lançamentos Pix e contas pagas</h2><p>Saldo do Caixa − saídas em Pix (Lançamentos) − contas pagas no mês</p></div></div><div class="panel-body" id="costBalanceBox"></div></div>
+  <div class="panel"><div class="panel-header"><div><h2>Parcelamentos em andamento</h2><p>Contador de parcelas lido da descrição</p></div></div><div class="table-wrap" id="installmentPlanTable"></div></div>
+</div>
+<div class="stats-grid" id="statsGrid"></div>
           <div class="grid-2"><div class="panel"><div class="panel-header"><div><h2>Entradas por dia</h2><p>Total de entradas dos fechamentos do Caixa, dia a dia</p></div><div class="legend"><span><i class="blue-dot"></i>Entradas (Caixa)</span></div></div><div class="chart-wrap"><canvas id="cashChart"></canvas></div></div><div class="panel"><div class="panel-header"><div><h2>Lançamentos · saídas por categoria</h2><p>Onde seu dinheiro está sendo utilizado</p></div></div><div class="panel-body"><div class="distribution-list" id="categoryDistribution"></div></div></div></div>
           <div class="panel"><div class="panel-header"><div><h2>Últimos lançamentos</h2><p>As movimentações mais recentes do período</p></div><button class="btn btn-ghost btn-sm" data-page="movements">Ver todos →</button></div><div class="table-wrap" id="recentTable"></div></div>
         </section>
@@ -319,7 +328,7 @@
         <section class="page" id="page-payables">
           <div class="page-heading"><div><h1>Contas a pagar</h1><p>Organize fornecedores, aluguel e outras obrigações por vencimento.</p></div><div class="heading-actions"><button class="btn btn-secondary" id="payableSyncNow" type="button" title="Buscar agora as alterações salvas em outros dispositivos">↻ Sincronizar</button><button class="btn btn-primary" id="payableAdd">＋ Nova conta</button></div></div>
           <div class="summary-strip"><div class="mini-stat"><span>Em aberto</span><strong id="payableOpenTotal" style="color:var(--red)">R$ 0,00</strong></div><div class="mini-stat"><span>Vencem hoje</span><strong id="payableTodayCount" style="color:var(--amber)">0</strong></div><div class="mini-stat"><span>Em atraso</span><strong id="payableOverdueCount" style="color:var(--red)">0</strong></div><div class="mini-stat"><span>Pagas</span><strong id="payablePaidCount" style="color:var(--green)">0</strong></div></div>
-          <div class="summary-strip" id="payableCostStrip"></div><div class="panel" style="margin-bottom:17px"><div class="panel-header"><div><h2>Total a pagar por dia</h2><p>Contas em aberto agrupadas por vencimento, separadas em custo fixo e variável.</p></div></div><div class="table-wrap" id="payableByDay"></div></div><div class="panel" id="payableEditor" style="display:none;margin-bottom:17px"><div class="panel-header"><div><h2 id="payableEditorTitle">Nova conta</h2><p>Cadastre o vencimento para receber o alerta no dia.</p></div><button class="btn btn-secondary btn-sm" id="payableCancel">Cancelar</button></div><div class="panel-body"><form id="payableForm"><input type="hidden" id="payableId" /><div class="form-grid"><div class="field full"><label>Fornecedor / favorecido *</label><input id="payableSupplier" maxlength="120" required placeholder="Ex.: Distribuidora, Imobiliária ou concessionária" /></div><div class="field"><label>Tipo de conta *</label><select id="payableCategory" required><option>Fornecedor</option><option>Aluguel</option><option>Contas e serviços</option><option>Impostos</option><option>Folha e pró-labore</option><option>Outros</option></select></div><div class="field"><label>Natureza do custo *</label><select id="payableCostType" required><option value="fixo">Custo fixo</option><option value="variavel">Custo variável</option></select></div><div class="field"><label>Descrição</label><input id="payableDescription" maxlength="160" placeholder="Ex.: Compra de medicamentos" /></div><div class="field"><label>Valor (R$) *</label><input id="payableAmount" type="number" min="0.01" step="0.01" required placeholder="0,00" /></div><div class="field"><label>Data de vencimento *</label><input id="payableDueDate" type="date" required /></div><div class="field full"><label>Observação</label><textarea id="payableNotes" maxlength="300" placeholder="Informações para pagamento"></textarea></div></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:15px"><button type="button" class="btn btn-secondary" id="payableCancelBottom">Cancelar</button><button class="btn btn-primary">Salvar conta</button></div></form></div></div>
+          <div class="summary-strip" id="payableCostStrip"></div><div class="panel" style="margin-bottom:17px"><div class="panel-header"><div><h2>Total a pagar por dia</h2><p>Contas em aberto agrupadas por vencimento, separadas em custo fixo e variável.</p></div></div><div class="table-wrap" id="payableByDay"></div></div><div class="panel" id="payableEditor" style="display:none;margin-bottom:17px"><div class="panel-header"><div><h2 id="payableEditorTitle">Nova conta</h2><p>Cadastre o vencimento para receber o alerta no dia.</p></div><button class="btn btn-secondary btn-sm" id="payableCancel">Cancelar</button></div><div class="panel-body"><form id="payableForm"><input type="hidden" id="payableId" /><div class="form-grid"><div class="field full"><label>Fornecedor / favorecido *</label><input id="payableSupplier" maxlength="120" required placeholder="Ex.: Distribuidora, Imobiliária ou concessionária" /></div><div class="field"><label>Tipo de conta *</label><select id="payableCategory" required><option>Fornecedor</option><option>Empréstimos</option><option>Aluguel</option><option>Contas e serviços</option><option>Impostos</option><option>Folha e pró-labore</option><option>Outros</option></select></div><div class="field"><label>Natureza do custo *</label><select id="payableCostType" required><option value="fixo">Custo fixo</option><option value="variavel">Custo variável</option></select></div><div class="field"><label>Descrição</label><input id="payableDescription" maxlength="160" placeholder="Ex.: Compra de medicamentos" /></div><div class="field"><label>Valor (R$) *</label><input id="payableAmount" type="number" min="0.01" step="0.01" required placeholder="0,00" /></div><div class="field"><label>Data de vencimento *</label><input id="payableDueDate" type="date" required /></div><div class="field full"><label>Observação</label><textarea id="payableNotes" maxlength="300" placeholder="Informações para pagamento"></textarea></div></div><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:15px"><button type="button" class="btn btn-secondary" id="payableCancelBottom">Cancelar</button><button class="btn btn-primary">Salvar conta</button></div></form></div></div>
           <div class="panel"><div class="filters"><div class="field-inline" style="flex:1;min-width:220px"><label>Buscar</label><input id="payableSearch" placeholder="Fornecedor ou descrição" /></div><div class="field-inline"><label>Filtro</label><select id="payableFilter"><option value="abertas">Em aberto</option><option value="todas">Todas</option><option value="pagas">Pagas</option><option value="atrasadas">Atrasadas</option></select></div></div><div class="table-wrap" id="payableTable"></div></div>
         </section>
 
@@ -681,9 +690,130 @@
         qs('#payableByDay').innerHTML = rows.length ? `<table><thead><tr><th>Vencimento</th><th>Contas</th><th>Custo fixo</th><th>Custo variável</th><th style="text-align:right">Total do dia</th></tr></thead><tbody>${rows.map(([d, x]) => `<tr><td>${fmtDate(d)}${d < todayISO() ? ' <span class="badge badge-out">Atrasado</span>' : ''}</td><td>${x.n}</td><td>${fmtCents(x.f)}</td><td>${fmtCents(x.v)}</td><td style="text-align:right" class="amount out">${fmtCents(x.f + x.v)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty"><b>Nada a pagar</b><span>Não há contas em aberto.</span></div>';
       }
       function ensurePayables() { state.payables = state.payables || { entries: [] }; state.payables.entries = Array.isArray(state.payables.entries) ? state.payables.entries : []; }
+      // ===== PARCELAS E CUSTOS FIXO/VARIÁVEL =====
+      function parseInstallment(text, allowBare) {
+        const t = String(text || '');
+        const m = t.match(/\(\s*(\d{1,3})\s*\/\s*(\d{1,3})\s*\)/) || (allowBare ? t.match(/(?<![\d\/])(\d{1,3})\s*\/\s*(\d{1,3})(?![\d\/])/) : null);
+        if (!m) return null;
+        const current = Number(m[1]), total = Number(m[2]);
+        if (total < 2 || current < 1 || current > total) return null;
+        return { current, total, text: m[0] };
+      }
+      function payableInstallment(e) {
+        const bare = e.category === 'Empréstimos';
+        return parseInstallment(e.description, bare) || parseInstallment(e.supplier, bare) || parseInstallment(e.notes, bare);
+      }
+      function installmentBadge(e) {
+        const i = payableInstallment(e);
+        return i ? `<span class="badge badge-neutral" title="Faltam ${i.total - i.current} parcela(s)">Parcela ${i.current}/${i.total}</span>` : '';
+      }
+      function addMonthsISO(iso, n) {
+        const [y, m, d] = String(iso).slice(0, 10).split('-').map(Number);
+        const t = new Date(y, m - 1 + n, 1), last = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate();
+        return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(Math.min(d, last)).padStart(2, '0')}`;
+      }
+      function payablePaidMonth(e) { return String(e.paidAt || e.dueDate || '').slice(0, 7); }
+      function buildInstallmentPlan() {
+        ensurePayables();
+        const map = new Map(), projected = [];
+        state.payables.entries.forEach(e => {
+          const inst = payableInstallment(e); if (!inst) return;
+          const base = normalizedText(`${e.supplier} ${e.description}`.replace(inst.text, ' ')).replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+          const key = base + '|' + inst.total;
+          if (!map.has(key)) map.set(key, { key, name: e.supplier, total: inst.total, entries: [] });
+          map.get(key).entries.push({ e, inst });
+        });
+        const series = [...map.values()];
+        series.forEach(s => {
+          const last = s.entries.reduce((a, b) => b.inst.current > a.inst.current ? b : a);
+          s.current = last.inst.current; s.remaining = s.total - s.current;
+          s.amountCents = moneyCents(last.e.amount); s.projectedCents = s.remaining * s.amountCents;
+          s.lastDue = last.e.dueDate;
+          for (let n = 1; n <= s.remaining; n++) projected.push({ name: s.name, dueDate: addMonthsISO(last.e.dueDate, n), amountCents: s.amountCents });
+        });
+        return { series, projected };
+      }
+      function loanMonthlySeries(plan) {
+        const map = new Map(), get = m => map.get(m) || map.set(m, { month: m, paid: 0, due: 0 }).get(m);
+        state.payables.entries.forEach(e => {
+          if (!payableInstallment(e)) return;
+          if (e.paid) get(payablePaidMonth(e)).paid += moneyCents(e.amount);
+          else get(String(e.dueDate).slice(0, 7)).due += moneyCents(e.amount);
+        });
+        plan.projected.forEach(p => { get(p.dueDate.slice(0, 7)).due += p.amountCents; });
+        const rows = [...map.values()].filter(r => r.month).sort((a, b) => a.month.localeCompare(b.month));
+        let left = rows.reduce((t, r) => t + r.due, 0);
+        rows.forEach(r => { left -= r.due; r.balanceAfter = left; });
+        const start = Math.max(0, rows.findIndex(r => r.month >= state.currentMonth) - 3);
+        return rows.slice(start, start + 18);
+      }
+      function drawLoanEvolution(id, rows) {
+        const c = qs('#' + id); if (!c) return;
+        const rc = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1, w = Math.max(300, rc.width), h = Math.max(190, rc.height);
+        c.width = w * dpr; c.height = h * dpr; const ctx = c.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+        ctx.font = '10px system-ui';
+        if (!rows.length) { ctx.fillStyle = '#8e98aa'; ctx.textAlign = 'center'; ctx.fillText('Cadastre contas parceladas, ex.: Pagamento BEMOL (1/16)', w / 2, h / 2); return; }
+        const left = 50, right = 50, top = 14, bottom = 26, pw = w - left - right, ph = h - top - bottom;
+        const maxBar = Math.max(100, ...rows.map(r => Math.max(r.paid, r.due))), maxLine = Math.max(100, ...rows.map(r => r.balanceAfter));
+        ctx.strokeStyle = '#eef1f5'; ctx.fillStyle = '#8e98aa';
+        for (let i = 0; i <= 3; i++) { const y = top + ph - ph * i / 3; ctx.beginPath(); ctx.moveTo(left, y); ctx.lineTo(w - right, y); ctx.stroke(); ctx.textAlign = 'left'; ctx.fillText(fmtCompact(maxBar * i / 300), 2, y + 3); ctx.textAlign = 'right'; ctx.fillText(fmtCompact(maxLine * i / 300), w - 2, y + 3); }
+        const slot = pw / rows.length, bw = Math.min(20, slot / 3);
+        rows.forEach((r, i) => {
+          const x = left + slot * i + slot / 2, hp = r.paid / maxBar * ph, hd = r.due / maxBar * ph;
+          ctx.fillStyle = '#15966b'; ctx.fillRect(x - bw, top + ph - hp, bw, hp);
+          ctx.fillStyle = '#d95c63'; ctx.fillRect(x, top + ph - hd, bw, hd);
+          ctx.fillStyle = '#8e98aa'; ctx.textAlign = 'center';
+          if (rows.length <= 12 || i % 2 === 0) ctx.fillText(r.month.slice(5) + '/' + r.month.slice(2, 4), x, h - 8);
+        });
+        ctx.beginPath(); rows.forEach((r, i) => { const x = left + slot * i + slot / 2, y = top + ph - r.balanceAfter / maxLine * ph; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+        ctx.strokeStyle = '#2e5bff'; ctx.lineWidth = 2.5; ctx.stroke(); ctx.lineWidth = 1;
+      }
+      function drawRadar(id, labels, values) {
+        const c = qs('#' + id); if (!c) return;
+        const rc = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1, w = Math.max(260, rc.width), h = Math.max(220, rc.height);
+        c.width = w * dpr; c.height = h * dpr; const ctx = c.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+        const n = labels.length, cx = w / 2, cy = h / 2 + 4, R = Math.min(w, h) / 2 - 38, max = Math.max(100, ...values);
+        const pt = (i, f) => [cx + Math.sin(2 * Math.PI * i / n) * R * f, cy - Math.cos(2 * Math.PI * i / n) * R * f];
+        ctx.strokeStyle = '#e8ecf2'; ctx.font = '10px system-ui'; ctx.textAlign = 'center';
+        [.25, .5, .75, 1].forEach(f => { ctx.beginPath(); for (let i = 0; i < n; i++) { const [x, y] = pt(i, f); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } ctx.closePath(); ctx.stroke(); });
+        labels.forEach((l, i) => { const [ex, ey] = pt(i, 1); ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke(); const [x, y] = pt(i, 1.2); ctx.fillStyle = '#6e788a'; ctx.fillText(l, x, y + 3); });
+        ctx.beginPath(); values.forEach((v, i) => { const [x, y] = pt(i, v / max); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.closePath();
+        ctx.fillStyle = 'rgba(46,91,255,.18)'; ctx.fill(); ctx.strokeStyle = '#2e5bff'; ctx.lineWidth = 2; ctx.stroke(); ctx.lineWidth = 1;
+        values.forEach((v, i) => { if (v > 0) { const [x, y] = pt(i, v / max); ctx.fillStyle = '#2e5bff'; ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill(); } });
+      }
+      function renderCostDash() {
+        if (!qs('#costDashKpis')) return;
+        ensurePayables();
+        const m = state.currentMonth, entries = state.payables.entries, plan = buildInstallmentPlan(), isInst = e => !!payableInstallment(e);
+        const paidMonth = entries.filter(e => e.paid && payablePaidMonth(e) === m);
+        const cashExp = analyticsLedgerRows().filter(r => r.source === 'closing-expense' && String(r.date).slice(0, 7) === m);
+        const fixedPaid = sumCents(cashExp, r => r.amount);
+        const fixedOpenList = entries.filter(e => !e.paid && !isInst(e) && payableCostType(e) === 'fixo');
+        const fixedOpen = sumCents(fixedOpenList, e => e.amount);
+        const varPaidList = paidMonth.filter(isInst), varPaid = sumCents(varPaidList, e => e.amount);
+        const varOpenRegistered = sumCents(entries.filter(e => !e.paid && isInst(e)), e => e.amount);
+        const varOpen = varOpenRegistered + plan.series.reduce((t, s) => t + s.projectedCents, 0);
+        const card = (t, ic, tone, v, foot) => `<div class="stat-card"><div class="stat-top"><span>${t}</span><span class="stat-icon ${tone}">${ic}</span></div><div class="stat-value">${fmtCents(v)}</div><div class="stat-foot">${foot}</div></div>`;
+        qs('#costDashKpis').innerHTML =
+          card('Total custo fixo pago', '✓', 'icon-green', fixedPaid, `${cashExp.length} despesa(s) do Caixa em ${monthLabel(m)}`) +
+          card('Total custo fixo a pagar', '⏳', 'icon-amber', fixedOpen, `${fixedOpenList.length} conta(s) fixa(s) em aberto`) +
+          card('Total custo variável pago', '✓', 'icon-blue', varPaid, `${varPaidList.length} parcela(s) paga(s) no mês`) +
+          card('Total custo variável a pagar', '↘', 'icon-red', varOpen, `${plan.series.reduce((t, s) => t + s.remaining, 0)} parcela(s) futura(s) projetada(s)`);
+        drawLoanEvolution('costEvolutionChart', loanMonthlySeries(plan));
+        const cats = ['Fornecedor', 'Empréstimos', 'Aluguel', 'Contas e serviços', 'Impostos', 'Folha e pró-labore', 'Outros'];
+        drawRadar('loanRadarChart', cats, cats.map(c => sumCents(paidMonth.filter(e => (cats.includes(e.category) ? e.category : 'Outros') === c), e => e.amount)));
+        const cashBalance = sumCents(periodClosings(m), closingSalesValue) - sumCents(cashExp, r => r.amount);
+        const pixOut = sumCents(state.transactions.filter(t => t.type === 'saida' && t.paymentMethod === 'pix' && monthKey(t.date) === m), t => t.amount);
+        const paidTotal = sumCents(paidMonth, e => e.amount);
+        qs('#costBalanceBox').innerHTML = [['Saldo do Caixa (entradas − despesas)', fmtCents(cashBalance)], ['− Saídas em Pix (Lançamentos)', fmtCents(pixOut)], ['− Contas pagas no mês', fmtCents(paidTotal)], ['<b>= Saldo final</b>', `<b>${fmtCents(cashBalance - pixOut - paidTotal)}</b>`]]
+          .map(([a, b]) => `<div class="metric-line"><span>${a}</span><strong>${b}</strong></div>`).join('');
+        qs('#installmentPlanTable').innerHTML = plan.series.length
+          ? `<table><thead><tr><th>Contrato</th><th>Parcela</th><th>Valor</th><th>Restam</th><th style="text-align:right">A pagar</th></tr></thead><tbody>${plan.series.map(s => `<tr><td><b>${esc(s.name)}</b></td><td>${s.current}/${s.total}</td><td>${fmtCents(s.amountCents)}</td><td>${s.remaining}</td><td style="text-align:right" class="amount out">${fmtCents(s.projectedCents)}</td></tr>`).join('')}</tbody></table>`
+          : '<div class="empty"><b>Nenhum parcelamento encontrado</b><span>Use a descrição no formato (1/16).</span></div>';
+      }
       function payableStatus(item) { if (item.paid) return 'Paga'; if (item.dueDate < todayISO()) return 'Atrasada'; if (item.dueDate === todayISO()) return 'Vence hoje'; return 'Agendada'; }
       function togglePayableEditor(open, item) { const editor = qs('#payableEditor'); editor.style.display = open ? 'block' : 'none'; if (!open) return; qs('#payableForm').reset(); setValue('payableId', item?.id || ''); setValue('payableSupplier', item?.supplier || ''); setValue('payableCategory', item?.category || 'Fornecedor'); setValue('payableDescription', item?.description || ''); setValue('payableAmount', item?.amount ?? ''); setValue('payableDueDate', item?.dueDate || todayISO()); setValue('payableNotes', item?.notes || ''); setValue('payableCostType', item ? payableCostType(item) : 'variavel'); qs('#payableEditorTitle').textContent = item ? 'Editar conta' : 'Nova conta'; qs('#payableSupplier').focus(); }
-      function renderPayables() { ensurePayables(); const search = (qs('#payableSearch')?.value || '').toLowerCase().trim(); const filter = qs('#payableFilter')?.value || 'abertas'; const entries = state.payables.entries; const open = entries.filter(e => !e.paid); const today = open.filter(e => e.dueDate === todayISO()); const overdue = open.filter(e => e.dueDate < todayISO()); setText('payableOpenTotal', fmtBRL(sum(open, e => e.amount))); setText('payableTodayCount', today.length); setText('payableOverdueCount', overdue.length); setText('payablePaidCount', entries.filter(e => e.paid).length); renderPayableCosts(open); const list = entries.filter(e => { const status = payableStatus(e); const filterMatch = filter === 'todas' || (filter === 'pagas' && e.paid) || (filter === 'atrasadas' && status === 'Atrasada') || (filter === 'abertas' && !e.paid); const searchMatch = !search || [e.supplier, e.description, e.category, e.notes].join(' ').toLowerCase().includes(search); return filterMatch && searchMatch; }).sort((a,b) => (a.paid - b.paid) || String(a.dueDate).localeCompare(String(b.dueDate))); const table = qs('#payableTable'); if (!list.length) { table.innerHTML = '<div class="empty"><b>Nenhuma conta encontrada</b><span>Cadastre fornecedores, aluguel e outros compromissos.</span></div>'; checkPayableAlerts(); return; } table.innerHTML = `<table><thead><tr><th>Vencimento</th><th>Fornecedor</th><th>Categoria</th><th>Descrição</th><th style="text-align:right">Valor</th><th>Status</th><th></th></tr></thead><tbody>${list.map(e => { const status = payableStatus(e); const tone = e.paid ? 'green' : (status === 'Atrasada' ? 'red' : status === 'Vence hoje' ? 'amber' : 'neutral'); return `<tr><td>${fmtDate(e.dueDate)}</td><td><b>${esc(e.supplier)}</b></td><td>${esc(e.category)}</td><td>${esc(e.description || '—')}<br><small>${esc(e.notes || '')}</small></td><td style="text-align:right" class="amount ${e.paid ? 'in' : 'out'}">${fmtBRL(e.amount)}</td><td>${pharmacyBadge(status, tone)}</td><td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm payable-paid" data-id="${esc(e.id)}">${e.paid ? 'Reabrir' : 'Marcar paga'}</button><button class="btn btn-ghost btn-sm payable-edit" data-id="${esc(e.id)}">Editar</button><button class="btn btn-ghost btn-sm payable-delete" data-id="${esc(e.id)}" style="color:var(--red)">Excluir</button></td></tr>`; }).join('')}</tbody></table>`; checkPayableAlerts(); }
+      function renderPayables() { ensurePayables(); const search = (qs('#payableSearch')?.value || '').toLowerCase().trim(); const filter = qs('#payableFilter')?.value || 'abertas'; const entries = state.payables.entries; const open = entries.filter(e => !e.paid); const today = open.filter(e => e.dueDate === todayISO()); const overdue = open.filter(e => e.dueDate < todayISO()); setText('payableOpenTotal', fmtBRL(sum(open, e => e.amount))); setText('payableTodayCount', today.length); setText('payableOverdueCount', overdue.length); setText('payablePaidCount', entries.filter(e => e.paid).length); renderPayableCosts(open); const list = entries.filter(e => { const status = payableStatus(e); const filterMatch = filter === 'todas' || (filter === 'pagas' && e.paid) || (filter === 'atrasadas' && status === 'Atrasada') || (filter === 'abertas' && !e.paid); const searchMatch = !search || [e.supplier, e.description, e.category, e.notes].join(' ').toLowerCase().includes(search); return filterMatch && searchMatch; }).sort((a,b) => (a.paid - b.paid) || String(a.dueDate).localeCompare(String(b.dueDate))); const table = qs('#payableTable'); if (!list.length) { table.innerHTML = '<div class="empty"><b>Nenhuma conta encontrada</b><span>Cadastre fornecedores, aluguel e outros compromissos.</span></div>'; checkPayableAlerts(); return; } table.innerHTML = `<table><thead><tr><th>Vencimento</th><th>Fornecedor</th><th>Categoria</th><th>Descrição</th><th style="text-align:right">Valor</th><th>Status</th><th></th></tr></thead><tbody>${list.map(e => { const status = payableStatus(e); const tone = e.paid ? 'green' : (status === 'Atrasada' ? 'red' : status === 'Vence hoje' ? 'amber' : 'neutral'); return `<tr><td>${fmtDate(e.dueDate)}</td><td><b>${esc(e.supplier)}</b></td><td>${esc(e.category)}</td><td>${esc(e.description || '—')} ${installmentBadge(e)}<br><small>${esc(e.notes || '')}</small></td><td style="text-align:right" class="amount ${e.paid ? 'in' : 'out'}">${fmtBRL(e.amount)}</td><td>${pharmacyBadge(status, tone)}</td><td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm payable-paid" data-id="${esc(e.id)}">${e.paid ? 'Reabrir' : 'Marcar paga'}</button><button class="btn btn-ghost btn-sm payable-edit" data-id="${esc(e.id)}">Editar</button><button class="btn btn-ghost btn-sm payable-delete" data-id="${esc(e.id)}" style="color:var(--red)">Excluir</button></td></tr>`; }).join('')}</tbody></table>`; checkPayableAlerts(); }
       function savePayable(event) { event.preventDefault(); ensurePayables(); const id = qs('#payableId').value; const data = { id: id || uid(), supplier: qs('#payableSupplier').value.trim(), category: qs('#payableCategory').value, costType: qs('#payableCostType').value, description: qs('#payableDescription').value.trim(), amount: Number(qs('#payableAmount').value), dueDate: qs('#payableDueDate').value, notes: qs('#payableNotes').value.trim(), paid: false, updatedAt: new Date().toISOString() }; if (!data.supplier || !data.amount || !data.dueDate) return notify('Preencha fornecedor, valor e vencimento.', 'error'); const index = state.payables.entries.findIndex(e => e.id === id); if (index >= 0) state.payables.entries[index] = { ...state.payables.entries[index], ...data, paid: state.payables.entries[index].paid }; else state.payables.entries.unshift({ ...data, createdAt: data.updatedAt }); saveState(); togglePayableEditor(false); renderPayables(); notify(index >= 0 ? 'Conta atualizada.' : 'Conta cadastrada.'); }
       function handlePayableAction(event) { const btn = event.target.closest('button'); if (!btn) return; const item = state.payables.entries.find(e => e.id === btn.dataset.id); if (!item) return; if (btn.classList.contains('payable-edit')) togglePayableEditor(true, item); if (btn.classList.contains('payable-paid')) { item.paid = !item.paid; item.paidAt = item.paid ? new Date().toISOString() : null; saveState(); renderPayables(); notify(item.paid ? 'Conta marcada como paga.' : 'Conta reaberta.'); } if (btn.classList.contains('payable-delete') && confirm(`Excluir a conta de ${item.supplier}?`)) { state.payables.entries = state.payables.entries.filter(e => e.id !== item.id); saveState(); renderPayables(); notify('Conta excluída.'); } }
       function checkPayableAlerts() { ensurePayables(); const due = state.payables.entries.filter(e => !e.paid && e.dueDate <= todayISO()); if (!due.length || payableAlertShownDate === todayISO()) return; payableAlertShownDate = todayISO(); const todayCount = due.filter(e => e.dueDate === todayISO()).length; setText('payableAlertMessage', todayCount ? `Atenção: ${todayCount} conta(s) vencem hoje. Confira os pagamentos.` : 'Atenção: existem contas em atraso que precisam ser regularizadas.'); qs('#payableAlertList').innerHTML = `<div style="display:grid;gap:8px;margin-top:12px">${due.map(e => `<div class="notice"><b>${esc(e.supplier)}</b> · ${fmtBRL(e.amount)}<br><small>${esc(e.category)} · ${e.dueDate === todayISO() ? 'Vence hoje' : `Vencida em ${fmtDate(e.dueDate)}`}</small></div>`).join('')}</div>`; showModal('payableAlertModal'); }
@@ -697,7 +827,7 @@
         qs('#dashboardSubtitle').textContent = `${monthLabel(state.currentMonth)} · ${count} ${count === 1 ? 'movimento registrado' : 'movimentos registrados'}`;
         const resultClass = t.result >= 0 ? 'positive' : 'negative';
         qs('#statsGrid').innerHTML = `<div class="stat-card"><div class="stat-top"><span>Lançamentos · entradas</span><span class="stat-icon icon-green">↗</span></div><div class="stat-value">${fmtBRL(t.entries)}</div><div class="stat-foot positive">${tx.filter(x=>x.type==='entrada').length} recebimentos no mês</div></div><div class="stat-card"><div class="stat-top"><span>Lançamentos · saídas</span><span class="stat-icon icon-red">↘</span></div><div class="stat-value">${fmtBRL(t.exits)}</div><div class="stat-foot">${tx.filter(x=>x.type==='saida').length} pagamentos no mês</div></div><div class="stat-card"><div class="stat-top"><span>Lançamentos · resultado</span><span class="stat-icon icon-blue">◒</span></div><div class="stat-value">${fmtBRL(t.result)}</div><div class="stat-foot ${resultClass}">${t.entries ? ((t.result/t.entries)*100).toFixed(1).replace('.',',') : '0,0'}% de margem líquida</div></div><div class="stat-card"><div class="stat-top"><span>Fundos registrados no mês</span><span class="stat-icon icon-amber">◈</span></div><div class="stat-value">${fmtBRL(t.funds)}</div><div class="stat-foot">Soma dos eventos cadastrados; não é saldo de caixa</div></div>`;
-        renderSalesChart(salesByDay(),'cashChart'); renderDistribution('#categoryDistribution', tx); renderCashCards(); renderSalesDashboard(); renderCashDash();
+        renderSalesChart(salesByDay(),'cashChart'); renderDistribution('#categoryDistribution', tx); renderCashCards(); renderSalesDashboard(); renderCashDash(); renderCostDash();
         const recent = [...tx].sort((a,b) => (b.date + b.createdAt).localeCompare(a.date + a.createdAt)).slice(0,6); qs('#recentTable').innerHTML = movementTable(recent, false);
       }
       function renderChart(tx) { const canvas = qs('#cashChart'); const rect = canvas.getBoundingClientRect(); const dpr = window.devicePixelRatio || 1; const w = Math.max(300, rect.width), h = Math.max(190, rect.height); canvas.width = w*dpr; canvas.height = h*dpr; const ctx = canvas.getContext('2d'); ctx.scale(dpr,dpr); ctx.clearRect(0,0,w,h); const days = new Date(Number(state.currentMonth.slice(0,4)), Number(state.currentMonth.slice(5)), 0).getDate(); const values = Array.from({length:days}, (_,i) => { const day = String(i+1).padStart(2,'0'); const prefix = state.currentMonth + '-' + day; return { in: sum(tx.filter(t=>t.date===prefix && t.type==='entrada'), x=>x.amount), out: sum(tx.filter(t=>t.date===prefix && t.type==='saida'), x=>x.amount) }; }); const max = Math.max(100, ...values.map(v => Math.max(v.in,v.out))); const left=39, right=12, top=17, bottom=28, plotW=w-left-right, plotH=h-top-bottom; ctx.strokeStyle='#eef1f5'; ctx.lineWidth=1; ctx.fillStyle='#8e98aa'; ctx.font='10px system-ui'; for(let i=0;i<=3;i++){ const y=top+plotH-(plotH*i/3); ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(w-right,y);ctx.stroke();ctx.fillText(fmtCompact(max*i/3),2,y+3); } const xStep=plotW/Math.max(1,days-1); const drawLine=(key,color)=>{ctx.beginPath(); values.forEach((v,i)=>{const x=left+i*xStep,y=top+plotH-(v[key]/max)*plotH;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.stroke();values.forEach((v,i)=>{if(v[key]>0){const x=left+i*xStep,y=top+plotH-(v[key]/max)*plotH;ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,3,0,Math.PI*2);ctx.fill();}})}; drawLine('in','#2e5bff');drawLine('out','#d95c63'); ctx.fillStyle='#8e98aa'; ctx.textAlign='center'; [1, Math.ceil(days/4), Math.ceil(days/2), Math.ceil(days*3/4), days].forEach(day=>{const x=left+(day-1)*xStep;ctx.fillText(String(day).padStart(2,'0'),x,h-8)}); ctx.textAlign='left'; }
@@ -1058,7 +1188,7 @@
         setTimeout(() => qs('#txAmount').focus(), 30);
       }
 
-      window.addEventListener('resize',()=>{if(state.currentPage==='dashboard'){renderSalesChart(salesByDay(),'cashChart');renderCashDash()}if(state.currentPage==='analytics')renderAnalytics()});
+      window.addEventListener('resize',()=>{if(state.currentPage==='dashboard'){renderSalesChart(salesByDay(),'cashChart');renderCashDash();renderCostDash()}if(state.currentPage==='analytics')renderAnalytics()});
 
       let authMode = 'login';
       function showAuthOverlay() { qs('#authOverlay').classList.remove('hidden'); }
