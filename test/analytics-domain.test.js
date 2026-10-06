@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
-const { cents, getCashBaseForClosing, calculateClosingCashReconciliation, buildFinancialLedger, filterFinancialLedger, buildRegisterSummary, buildModuleMetrics, canEditClosingToday, buildClosingRevision } = require('../analytics-domain');
+const { cents, getCashBaseForClosing, calculateClosingCashReconciliation, buildFinancialLedger, filterFinancialLedger, buildRegisterSummary, buildModuleMetrics, canEditClosing, buildClosingRevision } = require('../analytics-domain');
 
 const state = {
   transactions: [
@@ -234,7 +234,7 @@ test('Caixa, Lançamentos, Contas, Estoque e Convênio permanecem fontes separad
   assert.equal(result.convenio.total, 1000);
 });
 
-test('interface Caixa não lista Lançamentos e permite apagar fechamentos com auditoria', () => {
+test('interface Caixa não lista Lançamentos, permite retificação histórica auditada e não mostra Excluir', () => {
   const html = readFileSync(require.resolve('../index.html'), 'utf8');
   const cashPage = html.slice(html.indexOf('<section class="page" id="page-register">'), html.indexOf('<section class="page" id="page-analytics">'));
   const cashCards = html.slice(html.indexOf('function renderCashCards()'), html.indexOf('function movementTable('));
@@ -242,26 +242,27 @@ test('interface Caixa não lista Lançamentos e permite apagar fechamentos com a
   assert.ok(cashPage.length > 0);
   assert.doesNotMatch(closingHistory, /Esperado original \/ reconciliação|calculateClosingCashReconciliation|Recalculado:|Diferença|diffCents/);
   for (const header of ['Entradas', 'Saídas', 'Contado', 'Detalhes']) assert.match(closingHistory, new RegExp(`<th>${header}<\\/th>`));
+  assert.doesNotMatch(closingHistory, /closing-delete|Excluir/);
   assert.doesNotMatch(cashPage, /Lançamentos|registerUserSummary|registerMovementHistory/);
-  assert.match(html, /closing-delete/);
   assert.doesNotMatch(cashCards, /state\.transactions|Movimentos registrados|lançamento\(s\)/);
   assert.match(html, /closingsTable'\)\.addEventListener\('click'/);
-  assert.match(html, /deleteWithAudit\('closing'/);
-  assert.match(html, /canEditClosingToday\(c,todayISO\(\)\)\?`<button class="btn btn-ghost btn-sm closing-edit/);
-  assert.match(html, /canEditClosingToday\(c,todayISO\(\)\)/);
-  assert.match(html, /function startEditClosing\(id\)[\s\S]*?canEditClosingToday\(c, todayISO\(\)\)/);
-  assert.match(html, /function upsertClosing\(obj, coll\)[\s\S]*?canEditClosingToday\(state\.closings\[i\], todayISO\(\)\)/);
+  assert.match(html, /canEditClosing\(c\)\?`<button class="btn btn-ghost btn-sm closing-edit[^`]*>Editar<\/button>`/);
+  assert.match(html, /function startEditClosing\(id\)[\s\S]*?canEditClosing\(c\)/);
+  assert.match(html, /function upsertClosing\(obj, coll\)[\s\S]*?canEditClosing\(state\.closings\[i\]\)/);
+  assert.match(html, /closingBefore: revision\.before, closingAfter: revision\.after/);
+  assert.match(html, /Motivo da edição deste fechamento/);
 });
 
-test('edição do fechamento só é elegível na mesma data local do caixa', () => {
-  assert.equal(canEditClosingToday({ id: 'today', date: '2026-10-05' }, '2026-10-05'), true);
-  assert.equal(canEditClosingToday({ id: 'yesterday', date: '2026-10-04' }, '2026-10-05'), false);
-  assert.equal(canEditClosingToday({ date: '2026-10-05' }, '2026-10-05'), false);
-  assert.equal(canEditClosingToday(null, '2026-10-05'), false);
+test('fechamentos históricos com ID e data válidos podem ser retificados', () => {
+  assert.equal(canEditClosing({ id: 'today', date: '2026-10-05' }), true);
+  assert.equal(canEditClosing({ id: 'yesterday', date: '2026-10-04' }), true);
+  assert.equal(canEditClosing({ date: '2026-10-04' }), false);
+  assert.equal(canEditClosing({ id: 'invalid-date', date: '04/10/2026' }), false);
+  assert.equal(canEditClosing(null), false);
 });
 
 test('retificação mantém a versão anterior, ID e data de criação do fechamento', () => {
-  const original = { id: 'closing-1', date: '2026-10-05', entryTotal: 100, actual: 100, createdAt: '2026-10-05T16:00:00Z' };
+  const original = { id: 'closing-1', date: '2026-10-04', entryTotal: 100, actual: 100, createdAt: '2026-10-04T16:00:00Z' };
   const revision = buildClosingRevision(original, { entryTotal: 140, actual: 140 }, '2026-10-05T17:00:00Z');
   assert.equal(original.entryTotal, 100);
   assert.equal(revision.before.entryTotal, 100);
