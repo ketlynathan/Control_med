@@ -766,7 +766,7 @@
         populateClosingRegisters();
         const date=qs('#closingDate').value || todayISO(); updateExpectedNotice(date);
         const closes=[...(state.closings||[])].sort((a,b)=>(b.date+(b.closedAt||'')).localeCompare(a.date+(a.closedAt||'')));
-        qs('#closingsTable').innerHTML=closes.length?`<table><thead><tr><th>Data</th><th>Responsável</th><th>Caixa de origem</th><th>Entradas</th><th>Saídas</th><th>Contado</th><th>Detalhes</th><th></th></tr></thead><tbody>${closes.map(c=>{return `<tr><td>${fmtDate(c.date)}</td><td>${esc(collaboratorName(c.collaborator))}</td><td>${esc(registerName(c.register))}</td><td class="amount in">${fmtBRL(c.entryTotal || 0)}</td><td class="amount out">${fmtBRL(c.exitTotal || 0)}</td><td>${fmtBRL(c.actual)}</td><td>${Array.isArray(c.expenses)&&c.expenses.length?c.expenses.map(item=>`${esc(item.description)}: ${fmtBRL(item.amount)}`).join('<br>'):(esc(c.notes)||'—')}</td><td>${window.FinanceAnalytics.canEditClosingToday(c,todayISO())?`<button class="btn btn-ghost btn-sm closing-edit" type="button" data-id="${esc(c.id)}">Editar hoje</button>`:'—'}<button class="btn btn-ghost btn-sm closing-delete" data-id="${esc(c.id)}" style="color:var(--red)">Excluir</button></td></tr>`;}).join('')}</tbody></table>`:'<div class="empty"><div class="empty-icon">✓</div><b>Nenhum fechamento registrado</b><span>Faça a conferência do caixa ao final do turno.</span></div>';
+        qs('#closingsTable').innerHTML=closes.length?`<table><thead><tr><th>Data</th><th>Responsável</th><th>Caixa de origem</th><th>Entradas</th><th>Saídas</th><th>Contado</th><th>Detalhes</th><th></th></tr></thead><tbody>${closes.map(c=>{return `<tr><td>${fmtDate(c.date)}</td><td>${esc(collaboratorName(c.collaborator))}</td><td>${esc(registerName(c.register))}</td><td class="amount in">${fmtBRL(c.entryTotal || 0)}</td><td class="amount out">${fmtBRL(c.exitTotal || 0)}</td><td>${fmtBRL(c.actual)}</td><td>${Array.isArray(c.expenses)&&c.expenses.length?c.expenses.map(item=>`${esc(item.description)}: ${fmtBRL(item.amount)}`).join('<br>'):(esc(c.notes)||'—')}</td><td>${window.FinanceAnalytics.canEditClosing(c)?`<button class="btn btn-ghost btn-sm closing-edit" type="button" data-id="${esc(c.id)}">Editar</button>`:'—'}</td></tr>`;}).join('')}</tbody></table>`:'<div class="empty"><div class="empty-icon">✓</div><b>Nenhum fechamento registrado</b><span>Faça a conferência do caixa ao final do turno.</span></div>';
         const opens=[...(state.openings||[])].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
         qs('#openingsTable').innerHTML=opens.length?`<table><thead><tr><th>Data</th><th>Responsável</th><th>Caixa de origem</th><th>Valor disponível</th><th>Natureza</th><th>Observação</th><th></th></tr></thead><tbody>${opens.map(o=>{const record=fundRecordById.get(String(o.id));const disposition=record?.status==='confirmed_contribution'?'Aporte novo confirmado':record?.status==='carried_forward'?'Saldo carregado — não somado':record?.status==='initial_balance'?'Base inicial — contada uma vez':'Histórico pendente de conciliação';const tone=record?.status==='confirmed_contribution'?'in':'';return `<tr><td>${fmtDate(o.date)}</td><td>${esc(collaboratorName(o.collaborator))}</td><td>${esc(registerName(o.register))}</td><td class="amount ${tone}">${fmtBRL(o.amount)}</td><td>${esc(disposition)}</td><td>${esc(o.notes)||'—'}</td><td><button class="btn btn-ghost btn-sm opening-edit" data-id="${esc(o.id)}">Editar</button><button class="btn btn-ghost btn-sm opening-delete" data-id="${esc(o.id)}" style="color:var(--red)">Excluir</button></td></tr>`;}).join('')}</tbody></table>`:'<div class="empty"><div class="empty-icon">◈</div><b>Nenhum fundo registrado</b><span>Registre o valor inicial para controlar o troco.</span></div>';
         const audit=[...(state.auditLog||[])].sort((a,b)=>(b.timestamp||'').localeCompare(a.timestamp||''));
@@ -869,31 +869,31 @@
       }
       function startEditClosing(id) {
         const c = state.closings.find(x => x.id === id); if (!c) return;
-        if (!window.FinanceAnalytics.canEditClosingToday(c, todayISO())) { notify('A edição só fica disponível no mesmo dia do fechamento.', 'error'); return; }
+        if (!window.FinanceAnalytics.canEditClosing(c)) { notify('Este fechamento não está disponível para edição.', 'error'); return; }
         editingClosingId = c.id; populateClosingRegisters(); populateCollaborators();
         setValue('closingRegister', c.register); activeRegister = c.register; setValue('closingDate', c.date);
         qs('#closingDate').disabled = true; qs('#closingRegister').disabled = true;
         setValue('closingPix', c.pix || ''); setValue('closingDebit', c.debit || ''); setValue('closingCredit', c.credit || ''); setValue('closingCash', c.cash || '');
         renderClosingExpenses(Array.isArray(c.expenses) && c.expenses.length ? c.expenses : [{}]);
         setValue('closingActual', c.actual); setValue('closingCollaborator', c.collaborator || ''); setValue('closingNotes', c.notes || ''); setValue('closingCode', '');
-        qs('#closingSubmitBtn').textContent = 'Salvar correção de hoje'; qs('#closingEditCancel').style.display = 'block';
-        updateExpectedNotice(c.date); qs('#closingForm').scrollIntoView({ behavior: 'smooth', block: 'center' }); notify('Editando fechamento de hoje (' + fmtDate(c.date) + '). Informe o código e o motivo para salvar.');
+        qs('#closingSubmitBtn').textContent = 'Salvar retificação'; qs('#closingEditCancel').style.display = 'block';
+        updateExpectedNotice(c.date); qs('#closingForm').scrollIntoView({ behavior: 'smooth', block: 'center' }); notify('Editando fechamento de ' + fmtDate(c.date) + '. Confirme com o código e informe o motivo da retificação.');
       }
       function upsertClosing(obj, coll) {
         const i = state.closings.findIndex(c => c.id === obj.id);
-        if (i >= 0 && !window.FinanceAnalytics.canEditClosingToday(state.closings[i], todayISO())) { notify('Por segurança, só é possível corrigir o fechamento na mesma data em que foi feito.', 'error'); return; }
+        if (i >= 0 && !window.FinanceAnalytics.canEditClosing(state.closings[i])) { notify('Este fechamento não está disponível para retificação.', 'error'); return; }
         const dup = state.closings.find(c => c.id !== obj.id && String(c.register) === String(obj.register) && c.date === obj.date);
-        if (dup) { if (i < 0 && confirm(`Já existe um fechamento de ${registerName(obj.register)} em ${fmtDate(obj.date)}. Cada caixa tem um único fechamento por dia. Deseja abrir a edição do fechamento de hoje para incluir vendas ou ajustes?`)) startEditClosing(dup.id); else if (i >= 0) notify('Já existe outro fechamento deste caixa nesta data. Atualize o fechamento existente de hoje.', 'error'); return; }
+        if (dup) { if (i < 0 && confirm(`Já existe um fechamento de ${registerName(obj.register)} em ${fmtDate(obj.date)}. Cada caixa tem um único fechamento por dia. Deseja abrir a edição do fechamento existente para incluir vendas ou ajustes?`)) startEditClosing(dup.id); else if (i >= 0) notify('Já existe outro fechamento deste caixa nesta data. Atualize o fechamento existente.', 'error'); return; }
         if (i >= 0) {
           const old = state.closings[i], reason = prompt('Motivo da edição deste fechamento:');
           if (!reason || !reason.trim()) { notify('Informe o motivo para editar o fechamento.', 'error'); return; }
           const timestamp = new Date().toISOString();
           const revision = window.FinanceAnalytics.buildClosingRevision(old, { ...obj, editedAt: timestamp }, timestamp);
-          state.auditLog.push({ id: uid(), timestamp, action: 'edit', actionLabel: 'Fechamento corrigido no mesmo dia', originalDate: old.date, entryTotal: old.entryTotal || 0, newEntryTotal: revision.after.entryTotal || 0, performedBy: coll.name, reason: `${reason.trim()} (antes: entradas ${fmtBRL(old.entryTotal || 0)}, saídas ${fmtBRL(old.exitTotal || 0)}, contado ${fmtBRL(old.actual)})`, before: revision.before, after: revision.after, closingBefore: revision.before, closingAfter: revision.after });
+          state.auditLog.push({ id: uid(), timestamp, action: 'edit', actionLabel: 'Fechamento retificado', originalDate: old.date, entryTotal: old.entryTotal || 0, newEntryTotal: revision.after.entryTotal || 0, performedBy: coll.name, reason: `${reason.trim()} (antes: entradas ${fmtBRL(old.entryTotal || 0)}, saídas ${fmtBRL(old.exitTotal || 0)}, contado ${fmtBRL(old.actual)})`, before: revision.before, after: revision.after, closingBefore: revision.before, closingAfter: revision.after });
           state.closings[i] = revision.after;
         } else state.closings.push(obj);
         editingClosingId = null; resetClosingEditUI(); saveState(); updateAll();
-        notify(i >= 0 ? 'Fechamento de hoje atualizado; versão anterior preservada na auditoria.' : 'Fechamento validado e contabilizado automaticamente.');
+        notify(i >= 0 ? 'Fechamento retificado; versão anterior preservada na auditoria.' : 'Fechamento validado e contabilizado automaticamente.');
       }
       function askCollaboratorCode() { const code = prompt('Informe o código do colaborador para confirmar:'); if (code === null) return null; const c = state.collaborators.find(x => String(x.code) === String(code).trim()); if (!c) notify('Código inválido.', 'error'); return c || null; }
       function deleteWithAudit(kind, id) {
@@ -906,7 +906,6 @@
         if (kind === 'closing') { state.closings = state.closings.filter(x => x.id !== id); if (editingClosingId === id) { editingClosingId = null; resetClosingEditUI(); } } else state.openings = state.openings.filter(x => x.id !== id);
         saveState(); updateAll(); notify(label.charAt(0).toUpperCase() + label.slice(1) + ' excluído e registrado na auditoria.');
       }
-      qs('#closingsTable').addEventListener('click', e => { const b = e.target.closest('.closing-delete'); if (b) deleteWithAudit('closing', b.dataset.id); });
       qs('#openingsTable').addEventListener('click', e => { const b = e.target.closest('.opening-delete'); if (b) deleteWithAudit('opening', b.dataset.id); });
       qs('#closingsTable').addEventListener('click', e => { const b = e.target.closest('.closing-edit'); if (b) startEditClosing(b.dataset.id); });
       qs('#openingsTable').addEventListener('click', e => { const b = e.target.closest('.opening-edit'); if (b) editOpening(b.dataset.id); });

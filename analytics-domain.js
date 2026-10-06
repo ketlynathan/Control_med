@@ -537,8 +537,8 @@
     };
   }
 
-  function canEditClosingToday(closing, today = new Date().toISOString().slice(0, 10)) {
-    return !!closing && !!clean(closing.id) && /^\d{4}-\d{2}-\d{2}$/.test(String(closing.date || '')) && closing.date === today;
+  function canEditClosing(closing) {
+    return !!closing && !!clean(closing.id) && /^\d{4}-\d{2}-\d{2}$/.test(String(closing.date || ''));
   }
 
   function buildClosingRevision(closing, changes, updatedAt = new Date().toISOString()) {
@@ -548,7 +548,7 @@
     return { before, after };
   }
 
-  const api = { cents, amount, inferExpenseCategory, buildFinancialLedger, filterFinancialLedger, getCashBaseForClosing, calculateClosingCashReconciliation, buildRegisterSummary, buildModuleMetrics, canEditClosingToday, buildClosingRevision, expenseCategories };
+  const api = { cents, amount, inferExpenseCategory, buildFinancialLedger, filterFinancialLedger, getCashBaseForClosing, calculateClosingCashReconciliation, buildRegisterSummary, buildModuleMetrics, canEditClosing, buildClosingRevision, expenseCategories };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.FinanceAnalytics = api;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
