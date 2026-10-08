@@ -17,8 +17,20 @@
     if (!match) return null;
     return { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) };
   }
-  function key(value) {
+  function initialStart(options) {
+    const date = parse(options && options.initialStart);
+    return date && date.day === 5 ? date : null;
+  }
+  function periodKey(year, month) {
+    return `${year}-${String(month).padStart(2, '0')}`;
+  }
+  function key(value, options) {
+    const text = iso(value);
     const date = parse(value) || parse(new Date());
+    const first = initialStart(options);
+    if (first && text === `${periodKey(first.year, first.month)}-05`) {
+      return periodKey(first.year, first.month);
+    }
     let year = date.year;
     let month = date.month;
     // Dia 06 abre o ciclo do mês; dias 01–05 ainda pertencem ao ciclo anterior.
@@ -26,30 +38,32 @@
       month -= 1;
       if (month === 0) { month = 12; year -= 1; }
     }
-    return `${year}-${String(month).padStart(2, '0')}`;
+    return periodKey(year, month);
   }
   function addMonths(year, month, amount) {
     const date = new Date(year, month - 1 + amount, 1);
     return { year: date.getFullYear(), month: date.getMonth() + 1 };
   }
-  function range(period) {
+  function range(period, options) {
     const match = /^(\d{4})-(\d{2})$/.exec(String(period || ''));
     const base = match ? { year: Number(match[1]), month: Number(match[2]) } : (() => { const d = parse(new Date()); return { year: d.year, month: d.month }; })();
     const next = addMonths(base.year, base.month, 1);
+    const first = initialStart(options);
+    const isFirstPeriod = first && periodKey(first.year, first.month) === periodKey(base.year, base.month);
     return {
-      key: `${base.year}-${String(base.month).padStart(2, '0')}`,
-      start: `${base.year}-${String(base.month).padStart(2, '0')}-06`,
+      key: periodKey(base.year, base.month),
+      start: isFirstPeriod ? `${periodKey(first.year, first.month)}-05` : `${periodKey(base.year, base.month)}-06`,
       end: `${next.year}-${String(next.month).padStart(2, '0')}-05`,
     };
   }
-  function label(period) {
-    const r = range(period);
+  function label(period, options) {
+    const r = range(period, options);
     const fmt = value => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR');
     return `${fmt(r.start)} a ${fmt(r.end)}`;
   }
-  function contains(value, period) {
+  function contains(value, period, options) {
     const text = iso(value);
-    const r = range(period || key(value));
+    const r = range(period || key(value, options), options);
     return text >= r.start && text <= r.end;
   }
   function shift(period, amount) {

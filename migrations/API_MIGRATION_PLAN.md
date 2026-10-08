@@ -5,8 +5,13 @@
 Permitir que a aplicação deixe de depender do JSON completo em `business_state` sem apagar histórico e sem quebrar usuários existentes.
 
 ## Regra de segurança
-
 Durante toda a migração, `business_state` permanece preservado como legado, backup lógico e plano de rollback. Nenhuma tabela será apagada e nenhum registro será removido automaticamente.
+
+## Migração estrutural aditiva
+
+O SQL [`20261008101500_add_normalized_tables.sql`](./20261008101500_add_normalized_tables.sql) cria as tabelas normalizadas com `CREATE TABLE IF NOT EXISTS`, índices e chaves de idempotência `(business_id, legacy_id)`. Ele não modifica `business_state`, não copia dados automaticamente e não executa `DROP`, `DELETE` ou `TRUNCATE`.
+
+Execute-o somente no banco de dados correto, depois de confirmar o backup do provedor. A cópia do legado para as tabelas normalizadas será uma etapa separada, auditável e reaplicável.
 
 ## Fases
 

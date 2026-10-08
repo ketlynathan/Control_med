@@ -418,8 +418,9 @@
         entrada: ['Vendas', 'Serviços', 'Recebimento de cliente', 'Aporte', 'Outras entradas'],
         saida: ['Mercadoria', 'Fornecedores', 'Aluguel', 'Folha e pró-labore', 'Impostos', 'Marketing', 'Taxas bancárias', 'Contas e serviços', 'Manutenção', 'Outras saídas']
       };
+      let state;
       const defaultState = () => ({
-        business: { name: 'Meu negócio', doc: '', goal: 0, owner: 'Administrador' },
+        business: { name: 'Meu negócio', doc: '', goal: 0, owner: 'Administrador', accountingFirstCycleStart: null },
         collaborators: [{ id: uid(), name: 'Administrador', role: 'Gestor', code: '1234' }],
         transactions: [], openings: [], closings: [], auditLog: [],
         registers: { '1': { name: 'Caixa 01' }, '2': { name: 'Caixa 02' } },
@@ -428,7 +429,7 @@
         payables: { entries: [] },
         currentMonth: monthKey(new Date()), currentPage: 'dashboard'
       });
-      let state = loadState();
+      state = loadState();
       let activeRegister = '1'; let editingClosingId = null;
       let toastTimer;
 
@@ -436,11 +437,12 @@
       function qs(sel) { return document.querySelector(sel); }
       function qsa(sel) { return [...document.querySelectorAll(sel)]; }
       function todayISO() { const d = new Date(); const offset = d.getTimezoneOffset(); return new Date(d.getTime() - offset * 60000).toISOString().slice(0,10); }
-      function monthKey(value) { return window.AccountingPeriod.key(value); }
-      function periodRange(m = state.currentMonth) { return window.AccountingPeriod.range(m); }
+      function accountingOptions() { return { initialStart: state?.business?.accountingFirstCycleStart || null }; }
+      function monthKey(value) { return window.AccountingPeriod.key(value, accountingOptions()); }
+      function periodRange(m = state.currentMonth) { return window.AccountingPeriod.range(m, accountingOptions()); }
       function previousPeriodKey(m = state.currentMonth) { return window.AccountingPeriod.shift(m, -1); }
-      function monthLabel(m) { return m ? `Ciclo ${window.AccountingPeriod.label(m)}` : ''; }
-      function isActivePeriod(value, m = state.currentMonth) { return window.AccountingPeriod.contains(value, m); }
+      function monthLabel(m) { return m ? `Ciclo ${window.AccountingPeriod.label(m, accountingOptions())}` : ''; }
+      function isActivePeriod(value, m = state.currentMonth) { return window.AccountingPeriod.contains(value, m, accountingOptions()); }
       function fmtBRL(n) { return new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(Number(n || 0)); }
       function fmtNum(n) { return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(Number(n || 0)); }
       function fmtDate(s) { if (!s) return '—'; return new Date(s + 'T12:00:00').toLocaleDateString('pt-BR'); }

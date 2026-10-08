@@ -19,3 +19,22 @@ test('range do ciclo termina no dia 05 do mês seguinte', () => {
 test('rótulo identifica claramente as datas do ciclo', () => {
   assert.match(label('2026-09'), /06\/09\/2026 a 05\/10\/2026/);
 });
+
+test('primeiro ciclo pode começar no dia 05 e os seguintes continuam 06–05', () => {
+  const options = { initialStart: '2026-09-05' };
+
+  assert.equal(key('2026-09-05', options), '2026-09');
+  assert.deepEqual(range('2026-09', options), {
+    key: '2026-09',
+    start: '2026-09-05',
+    end: '2026-10-05',
+  });
+  assert.deepEqual(range('2026-10', options), {
+    key: '2026-10',
+    start: '2026-10-06',
+    end: '2026-11-05',
+  });
+  assert.equal(contains('2026-09-05', '2026-09', options), true);
+  assert.equal(contains('2026-10-06', '2026-09', options), false);
+  assert.match(label('2026-09', options), /05\/09\/2026 a 05\/10\/2026/);
+});
