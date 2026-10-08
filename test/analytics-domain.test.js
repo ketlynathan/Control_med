@@ -302,3 +302,12 @@ test('Contas a pagar oferece atualização manual sem sair do módulo e preserva
   assert.match(html, /function handlePayableAction\(event\)[\s\S]*?saveState\(\)/);
   assert.match(html, /setInterval\(refreshServerStateIfChanged, 15000\)/);
 });
+
+test('Conciliação e resumo de ciclos usam somente saídas em PIX para o abatimento', () => {
+  const html = readFileSync(require.resolve('../index.html'), 'utf8');
+  assert.match(html, /t\.type==='saida' && String\(t\.paymentMethod \|\| ''\)\.toLowerCase\(\)==='pix'/);
+  assert.match(html, /Total de movimentos PIX/);
+  assert.match(html, /Total a subtrair do saldo/);
+  assert.match(html, /finalBalance: cashEntries - cashExits - paidAccounts - pixExits/);
+  assert.match(html, /Resultado final/);
+});
