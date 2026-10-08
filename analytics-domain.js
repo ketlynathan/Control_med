@@ -7,7 +7,7 @@
   };
   const amount = value => cents(value) / 100;
   const clean = value => String(value ?? '').trim();
-  const within = (date, range) => !!date && (!range.start || date >= range.start) && (!range.end || date <= range.end);
+  const within = (date, range = {}) => (!range.start && !range.end) || (!!date && (!range.start || date >= range.start) && (!range.end || date <= range.end));
   const sumCents = (items, selector) => items.reduce((total, item) => total + cents(selector(item)), 0);
   const sumValuesCents = (items, selector) => items.reduce((total, item) => total + (Number(selector(item)) || 0), 0);
   const hasFilter = value => value != null && value !== '' && value !== 'all';
@@ -385,21 +385,24 @@
     };
   }
 
-  function buildRegisterSummary(state = {}) {
+  function buildRegisterSummary(state = {}, filters = {}) {
     const openings = Array.isArray(state.openings) ? state.openings : [];
     const ledger = buildFinancialLedger(state);
-    const movementEntriesCents = sumValuesCents(ledger.confirmedRecords.filter(row => row.type === 'entrada' && row.sourceModule === 'financial_transactions'), row => row.valueCents);
-    const movementExitsCents = sumValuesCents(ledger.confirmedRecords.filter(row => row.type === 'saida' && row.sourceModule === 'financial_transactions'), row => row.valueCents);
-    const closingEntriesCents = sumValuesCents(ledger.confirmedRecords.filter(row => row.type === 'entrada' && row.sourceModule === 'cash_closings'), row => row.valueCents);
-    const closingExitsCents = sumValuesCents(ledger.confirmedRecords.filter(row => row.type === 'saida' && row.sourceModule !== 'financial_transactions' && row.sourceModule !== 'payables' && row.sourceModule !== 'inventory' && row.sourceModule !== 'convenio'), row => row.valueCents);
+    const filtered = filterFinancialLedger(ledger, filters);
+    const movementEntriesCents = filtered.movementEntriesCents;
+    const movementExitsCents = filtered.movementExitsCents;
+    const closingEntriesCents = filtered.cashEntriesCents;
+    const closingExitsCents = filtered.cashExitsCents;
     const financialTransactionsEntriesCents = movementEntriesCents;
     const financialTransactionsExitsCents = movementExitsCents;
-    const lastFund = openings.slice().sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')) || String(b.id || '').localeCompare(String(a.id || '')))[0] || null;
+    const range = filters.range || { start: '', end: '' };
+    const filteredOpenings = openings.filter(row => within(row.date, range) && registerMatches(row, filters.register || 'all') && userMatches({ collaborator: row.collaborator }, filters.user || 'all'));
+    const lastFund = filteredOpenings.slice().sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')) || String(b.id || '').localeCompare(String(a.id || '')))[0] || null;
     const entriesCents = closingEntriesCents;
     const exitsCents = closingExitsCents;
-    const fundEventsCents = ledger.totals.fundEventsCents;
-    const fundsCents = ledger.totals.fundsCents;
-    const possibleFundCents = Math.max(0, fundEventsCents - fundsCents - sumValuesCents(ledger.records.filter(row => row.type === 'transferencia' && row.sourceModule === 'cash_openings'), row => row.valueCents));
+    const fundEventsCents = filtered.fundEventsCents;
+    const fundsCents = filtered.fundsCents;
+    const possibleFundCents = Math.max(0, fundEventsCents - fundsCents - sumValuesCents(filtered.records.filter(row => row.type === 'transferencia' && row.sourceModule === 'cash_openings'), row => row.valueCents));
     return {
       movementEntriesCents: financialTransactionsEntriesCents,
       closingEntriesCents,
@@ -416,6 +419,7 @@
       duplicatePairs: ledger.possibleDuplicates,
       lastFund,
       ledger,
+      filteredLedger: filtered,
     };
   }
 

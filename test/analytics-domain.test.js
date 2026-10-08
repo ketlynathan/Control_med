@@ -62,6 +62,27 @@ test('cards do Caixa excluem Lançamentos, detalham apenas saídas próprias e m
   assert.equal(result.lastFund.id, 'latest');
   assert.equal(result.lastFund.amount, 114);
 });
+test('cards do Caixa aplicam o período selecionado a entradas, saídas e último fundo', () => {
+  const result = buildRegisterSummary({
+    transactions: [{ id: 'outside', type: 'entrada', amount: 999, date: '2026-10-10' }],
+    closings: [
+      { id: 'sep', date: '2026-09-20', entryTotal: 100, exitTotal: 20, expenses: [{ amount: 20 }] },
+      { id: 'prior-count', date: '2026-09-30', register: '', actual: 50 },
+      { id: 'oct', date: '2026-10-07', entryTotal: 250, exitTotal: 35, expenses: [{ amount: 35 }] },
+    ],
+    openings: [
+      { id: 'sep-fund', date: '2026-09-20', amount: 50 },
+      { id: 'oct-fund', date: '2026-10-07', amount: 94 },
+    ],
+  }, { range: { start: '2026-10-06', end: '2026-11-05' } });
+
+  assert.equal(result.cashEntriesCents, 25000);
+  assert.equal(result.cashExitsCents, 3500);
+  assert.equal(result.cashBalanceCents, 21500);
+  assert.equal(result.lastFund.id, 'oct-fund');
+  assert.equal(result.fundsCents, 0);
+  assert.equal(result.filteredLedger.pendingFundCents, 9400);
+});
 
 test('base do fechamento usa a contagem mais recente, não soma fundos diários', () => {
   const closings = [
