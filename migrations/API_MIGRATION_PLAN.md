@@ -9,9 +9,9 @@ Durante toda a migração, `business_state` permanece preservado como legado, ba
 
 ## Migração estrutural aditiva
 
-O SQL [`20261008101500_add_normalized_tables.sql`](./20261008101500_add_normalized_tables.sql) cria as tabelas normalizadas com `CREATE TABLE IF NOT EXISTS`, índices e chaves de idempotência `(business_id, legacy_id)`. Ele não modifica `business_state`, não copia dados automaticamente e não executa `DROP`, `DELETE` ou `TRUNCATE`.
+A estrutura normalizada já está aplicada no Supabase `Control box` pela migração `20260914124502_normalize_business_operational_data`. O SQL [`20261008101500_add_normalized_tables.sql`](./20261008101500_add_normalized_tables.sql) permanece como referência histórica do desenho inicial, mas **não deve ser executado novamente no banco atual**, pois o schema real já existe e possui colunas diferentes.
 
-Execute-o somente no banco de dados correto, depois de confirmar o backup do provedor. A cópia do legado para as tabelas normalizadas será uma etapa separada, auditável e reaplicável.
+As próximas alterações devem usar o schema real verificado no banco. A cópia do legado para as tabelas normalizadas é uma etapa separada, auditável e reaplicável.
 
 ## Fases
 
@@ -19,8 +19,21 @@ Execute-o somente no banco de dados correto, depois de confirmar o backup do pro
 
 - API continua lendo `business_state`.
 - Criar funções de leitura nas tabelas normalizadas.
-- Comparar contagens e totais entre JSON legado e tabelas normalizadas.
+- Usar `src/migration/integrity-comparator.js` para comparar contagens, IDs e valores.
 - Registrar divergências por `business_id`.
+
+### Verificação atual do banco
+
+A primeira verificação somente leitura encontrou divergências que bloqueiam a troca da fonte:
+
+- um negócio possui 8 lançamentos legados e 4 normalizados;
+- o mesmo negócio possui 34 fechamentos legados e 9 normalizados;
+- existem 28 aberturas legadas e 4 normalizadas;
+- existem 22 registros de convênio legados e 5 normalizados;
+- em 6 lançamentos normalizados, 3 valores estão multiplicados por 100, 2 coincidem e 1 possui outra divergência;
+- `payable_accounts` possui zero registros.
+
+Enquanto essas divergências existirem, `business_state` continua sendo a fonte principal. Nenhuma correção automática de valores ou registros deve ser feita sem uma reconciliação por `legacy_id`.
 
 ### Fase 2 — escrita dual
 
