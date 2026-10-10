@@ -122,7 +122,7 @@ No ciclo 06/10–05/11, os 2 fechamentos somam Pix R$ 869,92, débito R$ 326,95,
 
 - O relatório de ciclo usa entradas e despesas dos fechamentos, sem fundos nem transações manuais. O saldo do Caixa é distinto do resultado líquido, que também deduz contas efetivamente pagas; pagamentos só deixam de ser deduzidos como uma segunda despesa quando há vínculo explícito confirmado por igualdade exata de valor.
 - As contas pagas antigas sem `paidAt` usam o vencimento como data de referência do ciclo. A interface deixa essa regra explícita; não infere datas de pagamento ausentes.
-- **Alerta crítico do Supabase:** as 14 tabelas `public` do projeto ativo estavam com Row Level Security (RLS) desabilitado na inspeção. Isso pode expor os dados a papéis `anon`/`authenticated`, conforme a configuração de chaves e políticas. Não habilitei RLS automaticamente para evitar bloquear a aplicação sem políticas compatíveis. É necessária revisão de acesso/políticas como trabalho separado e controlado.
+- **Hardening pendente no Supabase:** as 14 tabelas `public` do projeto ativo estavam com Row Level Security (RLS) desabilitado. Uma checagem agregada adicional confirmou privilégios `SELECT` em 0/14 tabelas para `anon` e 0/14 para `authenticated`; `service_role` tem acesso às 14, conforme esperado para o backend. Não encontrei concessões `PUBLIC` na visão de privilégios consultada. Assim, não há evidência de leitura direta via esses dois papéis no momento da inspeção, mas a ausência de RLS continua sendo uma proteção importante a habilitar com políticas compatíveis, após teste controlado. Nenhuma permissão foi alterada.
 
 
 ## Fechamento da implementação — 09/10/2026
