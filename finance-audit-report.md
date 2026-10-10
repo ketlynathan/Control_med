@@ -92,3 +92,45 @@ O estado original dos módulos continua preservado. O domínio produz `financial
 2. Validar o esperado físico recalculado com a contagem real do responsável pelo Caixa 1 antes de substituir qualquer valor original.
 3. Preparar migração aditiva/idempotente das tabelas normalizadas, com backup e reconciliação por ID — incluindo reconciliação da lacuna 9/22 e 29/81 — antes de declarar aquelas tabelas uma fonte de verdade.
 4. Validar a sincronização com dois dispositivos autenticados, sem sobrescrever qualquer estado em conflito.
+
+
+## Complemento de auditoria — fotografia real de 08/10/2026
+
+**Fonte:** projeto Supabase ativo “Control box”, estado JSON do negócio `DROGARIA CARVALHE`; fotografia consultada em 08/10/2026 às 22:09 UTC. Consulta somente de leitura, agregada, sem alterar registros. A fonte ativa tinha 34 fechamentos, 14 contas a pagar e ciclo selecionado `2026-10`.
+
+### Verificação de ciclos 06–05
+
+| Ciclo | Fechamentos | Entradas do Caixa | Saídas detalhadas do Caixa | Saldo operacional | Contas pagas | Qtd. pagas |
+|---|---:|---:|---:|---:|---:|---:|
+| 06/10/2026 a 05/11/2026 | 2 | R$ 1.408,87 | R$ 942,00 | R$ 466,87 | R$ 0,00 | 0 |
+| 06/09/2026 a 05/10/2026 | 31 | R$ 14.023,91 | R$ 5.909,65 | R$ 8.114,26 | R$ 5.473,59 | 8 |
+| 06/08/2026 a 05/09/2026 | 1 | R$ 157,00 | R$ 41,00 | R$ 116,00 | R$ 0,00 | 0 |
+
+No ciclo 06/10–05/11, os 2 fechamentos somam Pix R$ 869,92, débito R$ 326,95, crédito R$ 0,00 e dinheiro R$ 212,00; soma dos meios R$ 1.408,87, sem diferença. As 10 despesas detalhadas totalizam R$ 942,00: Alimentação R$ 13,00; Transporte R$ 40,00; Medicamentos R$ 220,00; Outros / Não classificado R$ 669,00. Soma das categorias = total de saídas.
+
+### Contas a Pagar por categoria (todos os registros)
+
+| Categoria | Qtd. | Total cadastrado | Total pago | Qtd. pagas | Pendente |
+|---|---:|---:|---:|---:|---:|
+| Aluguel | 1 | R$ 1.700,00 | R$ 1.700,00 | 1 | R$ 0,00 |
+| Contas e serviços | 10 | R$ 4.818,04 | R$ 3.427,59 | 5 | R$ 1.390,45 |
+| Empréstimos | 1 | R$ 1.300,00 | R$ 0,00 | 0 | R$ 1.300,00 |
+| Fornecedor | 2 | R$ 346,00 | R$ 346,00 | 2 | R$ 0,00 |
+| **Total geral** | **14** | **R$ 8.164,04** | **R$ 5.473,59** | **8** | **R$ 2.690,45** |
+
+### Observações de integridade e segurança
+
+- O relatório de ciclo usa entradas e despesas dos fechamentos, sem fundos nem transações manuais. O saldo do Caixa é distinto do resultado líquido, que também deduz contas efetivamente pagas; pagamentos só deixam de ser deduzidos como uma segunda despesa quando há vínculo explícito confirmado por igualdade exata de valor.
+- As contas pagas antigas sem `paidAt` usam o vencimento como data de referência do ciclo. A interface deixa essa regra explícita; não infere datas de pagamento ausentes.
+- **Alerta crítico do Supabase:** as 14 tabelas `public` do projeto ativo estavam com Row Level Security (RLS) desabilitado na inspeção. Isso pode expor os dados a papéis `anon`/`authenticated`, conforme a configuração de chaves e políticas. Não habilitei RLS automaticamente para evitar bloquear a aplicação sem políticas compatíveis. É necessária revisão de acesso/políticas como trabalho separado e controlado.
+
+
+## Fechamento da implementação — 09/10/2026
+
+- Removidas as páginas, rotas de navegação, formulários/modais e atalhos visíveis de Lançamentos e Conciliação. Dados `transactions` e outros campos legados seguem preservados no estado local/remoto e no ledger; a tela e o relatório do Caixa não os consultam. Rotas antigas salvas em `currentPage` retornam à Visão geral após carregamento local ou remoto.
+- Caixa e Relatórios usam o período selecionado pelo seletor global, com limites gerados pelo `AccountingPeriod` (06–05; respeita o primeiro ciclo configurado). Dashboard preserva resumo por dia recolhido e adiciona resumo por responsável.
+- Adicionada edição de fechamentos históricos mediante código do colaborador e motivo obrigatório; cada alteração guarda snapshot anterior/posterior no `auditLog`. Removido o botão de exclusão de fechamento; nenhum registro histórico foi apagado.
+- Contas a Pagar exibe separadamente quantidade, total cadastrado, pago e pendente, com linhas por categoria. Relatórios exibem despesas do Caixa em quatro categorias, meios de entrada, resultado líquido com deduplicação apenas por vínculo explícito, e comparativo entre ciclos.
+- Validação: `npm run build` concluído; `npm run check` passou em 43/43 testes; sintaxe JavaScript embutida válida; smoke test no Chromium autenticado com estado sintético passou sem exceções e confirmou rotas removidas, relatórios renderizados e movimento legado ausente do Caixa.
+- O smoke test foi isolado e descartável; a validação SQL foi somente leitura. Nenhum lançamento, conta, fechamento, anexo, auditoria ou configuração de produção foi alterado pela validação.
+- **Status de publicação:** implementação pronta para revisão no branch de trabalho; merge na `main`/deploy de produção fica separado para confirmação explícita após a revisão do PR.
