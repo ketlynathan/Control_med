@@ -273,6 +273,9 @@ test('interface Caixa mantém dados isolados, permite editar o histórico e não
   assert.match(html, /function startEditClosing\(id\)[\s\S]*?canEditClosing\(c\)/);
   assert.match(html, /function upsertClosing\(obj, coll\)[\s\S]*?canEditClosing\(state\.closings\[i\]\)/);
   assert.match(html, /Fechamento histórico corrigido/);
+  assert.match(html, /function mergeLocalChangesIntoServer\(serverState, localState\)/);
+  assert.match(html, /const hadLocalChangesBeforeRemote = localChangeRevision > lastServerChangeRevision/);
+  assert.match(html, /if \(hadLocalChangesBeforeRemote \|\| recoveredLocalPayables\)[\s\S]*?await syncStateToServer\(\)/);
 });
 
 test('qualquer fechamento histórico com ID e data válidos pode receber retificação auditada', () => {
