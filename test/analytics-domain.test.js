@@ -272,6 +272,9 @@ test('interface Caixa não lista Lançamentos e permite apagar fechamentos com a
   assert.match(html, /canEditClosingToday\(c,todayISO\(\)\)/);
   assert.match(html, /function startEditClosing\(id\)[\s\S]*?canEditClosingToday\(c, todayISO\(\)\)/);
   assert.match(html, /function upsertClosing\(obj, coll\)[\s\S]*?canEditClosingToday\(state\.closings\[i\], todayISO\(\)\)/);
+  assert.match(html, /function mergeLocalChangesIntoServer\(serverState, localState\)/);
+  assert.match(html, /const hadLocalChangesBeforeRemote = localChangeRevision > lastServerChangeRevision/);
+  assert.match(html, /if \(hadLocalChangesBeforeRemote \|\| recoveredLocalPayables\)[\s\S]*?await syncStateToServer\(\)/);
 });
 
 test('edição do fechamento só é elegível na mesma data local do caixa', () => {

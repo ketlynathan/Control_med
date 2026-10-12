@@ -553,6 +553,24 @@
         normalized.financialMovements = window.FinanceAnalytics.buildFinancialLedger(normalized).records;
         return normalized;
       }
+      function mergeLocalChangesIntoServer(serverState, localState) {
+        const merged = { ...serverState };
+        ['transactions', 'openings', 'closings', 'auditLog'].forEach(key => {
+          const remoteRows = Array.isArray(serverState?.[key]) ? serverState[key] : [];
+          const localRows = Array.isArray(localState?.[key]) ? localState[key] : [];
+          const localById = new Map(localRows.filter(row => row?.id).map(row => [String(row.id), row]));
+          const rows = remoteRows.map(row => localById.get(String(row.id)) || row);
+          const remoteIds = new Set(remoteRows.map(row => String(row.id)));
+          localRows.forEach(row => { if (row?.id && !remoteIds.has(String(row.id))) rows.push(row); });
+          merged[key] = rows;
+        });
+        // Preserve local business/configuration edits made before the first remote response.
+        merged.business = { ...(serverState?.business || {}), ...(localState?.business || {}) };
+        merged.registers = { ...(serverState?.registers || {}), ...(localState?.registers || {}) };
+        if (localState?.collaborators?.length) merged.collaborators = localState.collaborators;
+        if (localState?.payables?.entries?.length && !serverState?.payables?.entries?.length) merged.payables = localState.payables;
+        return merged;
+      }
       async function reloadServerStateAfterConflict() {
         if (!syncConflict) return;
         if (!confirm('A versão local será preservada como cópia de segurança neste navegador. Carregar agora os dados mais recentes do servidor?')) return;
@@ -1270,13 +1288,15 @@
         const acc = qs('#accountEmail'); if (acc) acc.textContent = localStorage.getItem(AUTH_EMAIL_KEY) || '—';
         try {
           const localStateBeforeSync = loadState();
+          const hadLocalChangesBeforeRemote = localChangeRevision > lastServerChangeRevision;
           const { state: serverState, version } = await apiFetch('/api/state');
           serverVersion = version || null;
           if (serverState) {
             const localPayables = localStateBeforeSync.payables?.entries || [];
             const serverPayables = serverState.payables?.entries || [];
             const recoveredLocalPayables = !serverPayables.length && localPayables.length > 0;
-            state = normalizeServerState({ ...serverState, payables: serverPayables.length ? serverState.payables : (localStateBeforeSync.payables || defaultState().payables) });
+            const stateToLoad = hadLocalChangesBeforeRemote ? mergeLocalChangesIntoServer(serverState, localStateBeforeSync) : { ...serverState, payables: serverPayables.length ? serverState.payables : (localStateBeforeSync.payables || defaultState().payables) };
+            state = normalizeServerState(stateToLoad);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
             serverStateReady = true;
             const pendingConflictDraft = localStorage.getItem(SYNC_CONFLICT_DRAFT_KEY);
@@ -1287,8 +1307,10 @@
               const text = qs('#syncConflictText'); if (text) text.textContent = 'Existe uma cópia local de uma alteração que não foi sincronizada. Ela foi mantida separada; baixe-a ou confira os dados antes de continuar.';
               setSyncStatus('conflict');
             } else {
-              if (recoveredLocalPayables) await syncStateToServer();
-              setSyncStatus('synced');
+              if (hadLocalChangesBeforeRemote || recoveredLocalPayables) {
+                setSyncStatus('saving');
+                await syncStateToServer();
+              } else setSyncStatus('synced');
             }
           } else {
             // Conta nova sem estado salvo ainda: envia o estado local (ou o padrão) como ponto de partida.
