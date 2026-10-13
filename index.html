@@ -513,6 +513,12 @@
         normalized.financialMovements = window.FinanceAnalytics.buildFinancialLedger(normalized).records;
         return normalized;
       }
+      function hasLocalRowsMissingRemotely(serverState, localState) {
+        return ['transactions', 'openings', 'closings', 'auditLog'].some(key => {
+          const remoteIds = new Set((Array.isArray(serverState?.[key]) ? serverState[key] : []).map(row => String(row?.id || '')));
+          return (Array.isArray(localState?.[key]) ? localState[key] : []).some(row => row?.id && !remoteIds.has(String(row.id)));
+        });
+      }
       function mergeLocalChangesIntoServer(serverState, localState) {
         const merged = { ...serverState };
         ['transactions', 'openings', 'closings', 'auditLog'].forEach(key => {
@@ -1248,7 +1254,9 @@
             const localPayables = localStateBeforeSync.payables?.entries || [];
             const serverPayables = serverState.payables?.entries || [];
             const recoveredLocalPayables = !serverPayables.length && localPayables.length > 0;
-            const stateToLoad = hadLocalChangesBeforeRemote ? mergeLocalChangesIntoServer(serverState, localStateBeforeSync) : { ...serverState, payables: serverPayables.length ? serverState.payables : (localStateBeforeSync.payables || defaultState().payables) };
+            const localRowsMissingRemotely = hasLocalRowsMissingRemotely(serverState, localStateBeforeSync);
+            const shouldMergeLocal = hadLocalChangesBeforeRemote || localRowsMissingRemotely;
+            const stateToLoad = shouldMergeLocal ? mergeLocalChangesIntoServer(serverState, localStateBeforeSync) : { ...serverState, payables: serverPayables.length ? serverState.payables : (localStateBeforeSync.payables || defaultState().payables) };
             state = normalizeServerState(stateToLoad);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
             serverStateReady = true;
@@ -1260,7 +1268,7 @@
               const text = qs('#syncConflictText'); if (text) text.textContent = 'Existe uma cópia local de uma alteração que não foi sincronizada. Ela foi mantida separada; baixe-a ou confira os dados antes de continuar.';
               setSyncStatus('conflict');
             } else {
-              if (hadLocalChangesBeforeRemote || recoveredLocalPayables) {
+              if (shouldMergeLocal || recoveredLocalPayables) {
                 setSyncStatus('saving');
                 await syncStateToServer();
               } else setSyncStatus('synced');

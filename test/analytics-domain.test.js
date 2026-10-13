@@ -275,7 +275,8 @@ test('interface Caixa mantém dados isolados, permite editar o histórico e não
   assert.match(html, /Fechamento histórico corrigido/);
   assert.match(html, /function mergeLocalChangesIntoServer\(serverState, localState\)/);
   assert.match(html, /const hadLocalChangesBeforeRemote = localChangeRevision > lastServerChangeRevision/);
-  assert.match(html, /if \(hadLocalChangesBeforeRemote \|\| recoveredLocalPayables\)[\s\S]*?await syncStateToServer\(\)/);
+  assert.match(html, /const shouldMergeLocal = hadLocalChangesBeforeRemote \|\| localRowsMissingRemotely/);
+  assert.match(html, /if \(shouldMergeLocal \|\| recoveredLocalPayables\)[\s\S]*?await syncStateToServer\(\)/);
 });
 
 test('qualquer fechamento histórico com ID e data válidos pode receber retificação auditada', () => {
