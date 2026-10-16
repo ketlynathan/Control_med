@@ -5,8 +5,8 @@ const TOKEN_EXPIRY = '30d';
 
 function getSecret() {
   const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    throw new Error('JWT_SECRET não está configurada nas variáveis de ambiente da Vercel.');
+  if (!secret || Buffer.byteLength(secret, 'utf8') < 32) {
+    throw new Error('JWT_SECRET deve estar configurada com pelo menos 32 bytes aleatórios.');
   }
   return secret;
 }
@@ -20,21 +20,21 @@ function comparePassword(password, hash) {
 }
 
 function signToken(payload) {
-  return jwt.sign(payload, getSecret(), { expiresIn: TOKEN_EXPIRY });
+  return jwt.sign(payload, getSecret(), { expiresIn: TOKEN_EXPIRY, algorithm: 'HS256' });
 }
 
 function verifyToken(token) {
-  return jwt.verify(token, getSecret());
+  return jwt.verify(token, getSecret(), { algorithms: ['HS256'] });
 }
 
 /** Extracts and validates the business id from the Authorization: Bearer header. */
 function getAuthBusinessId(req) {
   const header = req.headers.authorization || '';
-  const [scheme, token] = header.split(' ');
-  if (scheme !== 'Bearer' || !token) return null;
+  const match = /^Bearer\s+(\S+)$/i.exec(header);
+  if (!match) return null;
   try {
-    const decoded = verifyToken(token);
-    return decoded.businessId || null;
+    const decoded = verifyToken(match[1]);
+    return typeof decoded.businessId === 'string' && decoded.businessId ? decoded.businessId : null;
   } catch (err) {
     return null;
   }
