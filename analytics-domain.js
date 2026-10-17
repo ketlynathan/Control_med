@@ -554,8 +554,6 @@
 
   function canEditClosing(closing) {
     return !!closing && !!clean(closing.id) && /^\d{4}-\d{2}-\d{2}$/.test(String(closing.date || ''));
-<<<<<<< HEAD
-=======
   }
 
   function canEditClosingToday(closing, today = new Date().toISOString().slice(0, 10)) {
@@ -652,7 +650,6 @@
       pendingCount: sum.pendingCount + row.pendingCount, pendingCents: sum.pendingCents + row.pendingCents,
     }), { count: 0, totalCents: 0, paidCount: 0, paidCents: 0, pendingCount: 0, pendingCents: 0 });
     return { rows, total };
->>>>>>> origin/main
   }
 
   function buildClosingRevision(closing, changes, updatedAt = new Date().toISOString()) {
@@ -662,11 +659,7 @@
     return { before, after };
   }
 
-<<<<<<< HEAD
-  const api = { cents, amount, inferExpenseCategory, buildFinancialLedger, filterFinancialLedger, getCashBaseForClosing, calculateClosingCashReconciliation, buildRegisterSummary, buildModuleMetrics, canEditClosing, buildClosingRevision, expenseCategories };
-=======
   const api = { cents, amount, inferExpenseCategory, closingExpenseKey, buildFinancialLedger, filterFinancialLedger, getCashBaseForClosing, calculateClosingCashReconciliation, buildRegisterSummary, buildModuleMetrics, canEditClosing, canEditClosingToday, buildClosingRevision, buildFinancialCycleReport, summarizePayablesByCategory, expenseCategories };
->>>>>>> origin/main
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.FinanceAnalytics = api;
 })(typeof globalThis !== 'undefined' ? globalThis : window);

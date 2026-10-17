@@ -1,11 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
-<<<<<<< HEAD
-const { cents, getCashBaseForClosing, calculateClosingCashReconciliation, buildFinancialLedger, filterFinancialLedger, buildRegisterSummary, buildModuleMetrics, canEditClosing, buildClosingRevision } = require('../analytics-domain');
-=======
 const { cents, getCashBaseForClosing, calculateClosingCashReconciliation, buildFinancialLedger, filterFinancialLedger, buildRegisterSummary, buildModuleMetrics, canEditClosing, canEditClosingToday, buildClosingRevision, buildFinancialCycleReport, summarizePayablesByCategory, closingExpenseKey } = require('../analytics-domain');
->>>>>>> origin/main
 
 const state = {
   transactions: [
@@ -259,11 +255,7 @@ test('Caixa, Lançamentos, Contas, Estoque e Convênio permanecem fontes separad
   assert.equal(result.convenio.total, 1000);
 });
 
-<<<<<<< HEAD
 test('interface Caixa não lista Lançamentos, permite retificação histórica auditada e não mostra Excluir', () => {
-=======
-test('interface Caixa mantém dados isolados, permite editar o histórico e não oferece exclusão de fechamento', () => {
->>>>>>> origin/main
   const html = readFileSync(require.resolve('../index.html'), 'utf8');
   const cashPage = html.slice(html.indexOf('<section class="page" id="page-register">'), html.indexOf('<section class="page" id="page-analytics">'));
   const cashCards = html.slice(html.indexOf('function renderCashCards()'), html.indexOf('function movementTable('));
@@ -273,7 +265,6 @@ test('interface Caixa mantém dados isolados, permite editar o histórico e não
   for (const header of ['Entradas', 'Saídas', 'Contado', 'Detalhes']) assert.match(closingHistory, new RegExp(`<th>${header}<\\/th>`));
   assert.doesNotMatch(closingHistory, /closing-delete|Excluir/);
   assert.doesNotMatch(cashPage, /Lançamentos|registerUserSummary|registerMovementHistory/);
-<<<<<<< HEAD
   assert.doesNotMatch(cashCards, /state\.transactions|Movimentos registrados|lançamento\(s\)/);
   assert.match(html, /closingsTable'\)\.addEventListener\('click'/);
   assert.match(html, /canEditClosing\(c\)\?`<button class="btn btn-ghost btn-sm closing-edit[^`]*>Editar<\/button>`/);
@@ -281,6 +272,12 @@ test('interface Caixa mantém dados isolados, permite editar o histórico e não
   assert.match(html, /function upsertClosing\(obj, coll\)[\s\S]*?canEditClosing\(state\.closings\[i\]\)/);
   assert.match(html, /closingBefore: revision\.before, closingAfter: revision\.after/);
   assert.match(html, /Motivo da edição deste fechamento/);
+  assert.doesNotMatch(html, /deleteWithAudit\('closing'/);
+  assert.match(html, /startEditClosing\(b\.dataset\.id\)/);
+  assert.match(html, /function mergeLocalChangesIntoServer\(serverState, localState\)/);
+  assert.match(html, /const hadLocalChangesBeforeRemote = localChangeRevision > lastServerChangeRevision/);
+  assert.match(html, /const shouldMergeLocal = hadLocalChangesBeforeRemote \|\| localRowsMissingRemotely/);
+  assert.match(html, /if \(shouldMergeLocal \|\| recoveredLocalPayables\)[\s\S]*?await syncStateToServer\(\)/);
 });
 
 test('fechamentos históricos com ID e data válidos podem ser retificados', () => {
@@ -289,27 +286,6 @@ test('fechamentos históricos com ID e data válidos podem ser retificados', () 
   assert.equal(canEditClosing({ date: '2026-10-04' }), false);
   assert.equal(canEditClosing({ id: 'invalid-date', date: '04/10/2026' }), false);
   assert.equal(canEditClosing(null), false);
-=======
-  assert.doesNotMatch(html, /closing-delete/);
-  assert.doesNotMatch(cashCards, /state\.transactions|Movimentos registrados|lançamento\(s\)/);
-  assert.match(html, /closingsTable'\)\.addEventListener\('click'/);
-  assert.match(html, /startEditClosing\(b\.dataset\.id\)/);
-  assert.doesNotMatch(html, /deleteWithAudit\('closing'/);
-  assert.match(html, /canEditClosing\(c\)\?`<button class="btn btn-ghost btn-sm closing-edit/);
-  assert.match(html, /function startEditClosing\(id\)[\s\S]*?canEditClosing\(c\)/);
-  assert.match(html, /function upsertClosing\(obj, coll\)[\s\S]*?canEditClosing\(state\.closings\[i\]\)/);
-  assert.match(html, /Fechamento histórico corrigido/);
-  assert.match(html, /function mergeLocalChangesIntoServer\(serverState, localState\)/);
-  assert.match(html, /const hadLocalChangesBeforeRemote = localChangeRevision > lastServerChangeRevision/);
-  assert.match(html, /const shouldMergeLocal = hadLocalChangesBeforeRemote \|\| localRowsMissingRemotely/);
-  assert.match(html, /if \(shouldMergeLocal \|\| recoveredLocalPayables\)[\s\S]*?await syncStateToServer\(\)/);
-});
-
-test('qualquer fechamento histórico com ID e data válidos pode receber retificação auditada', () => {
-  assert.equal(canEditClosing({ id: 'old', date: '2026-01-01' }), true);
-  assert.equal(canEditClosing({ date: '2026-01-01' }), false);
-  assert.equal(canEditClosing({ id: 'invalid', date: '01/01/2026' }), false);
-  assert.equal(canEditClosing(null), false);
 });
 
 test('helper legado de elegibilidade no mesmo dia permanece retrocompatível', () => {
@@ -317,7 +293,6 @@ test('helper legado de elegibilidade no mesmo dia permanece retrocompatível', (
   assert.equal(canEditClosingToday({ id: 'yesterday', date: '2026-10-04' }, '2026-10-05'), false);
   assert.equal(canEditClosingToday({ date: '2026-10-05' }, '2026-10-05'), false);
   assert.equal(canEditClosingToday(null, '2026-10-05'), false);
->>>>>>> origin/main
 });
 
 test('retificação mantém a versão anterior, ID e data de criação do fechamento', () => {
