@@ -21,12 +21,12 @@ test('mescla campos diferentes do mesmo registro', () => {
   assert.deepEqual(result.state.payables.entries, [{ id: 'rent', amount: 120, paid: true }]);
 });
 
-test('sinaliza alterações concorrentes no mesmo campo e prefere o servidor ativo', () => {
+test('sinaliza alterações concorrentes no mesmo campo e prefere a cópia local', () => {
   const base = { transactions: [{ id: 'tx', amount: 100 }] };
   const local = { transactions: [{ id: 'tx', amount: 120 }] };
   const remote = { transactions: [{ id: 'tx', amount: 130 }] };
   const result = mergeBusinessState(base, local, remote);
-  assert.deepEqual(result.state.transactions, remote.transactions);
+  assert.deepEqual(result.state.transactions, local.transactions);
   assert.deepEqual(result.conflicts, ['transactions[tx].amount']);
 });
 
@@ -39,22 +39,31 @@ test('propaga exclusão quando o outro dispositivo não alterou o registro', () 
   assert.deepEqual(result.state.closings, []);
 });
 
-test('mantém a exclusão do servidor e sinaliza a edição local concorrente', () => {
+test('mantém a edição local e sinaliza a exclusão remota concorrente', () => {
   const base = { closings: [{ id: 'old', actual: 100 }] };
   const local = { closings: [{ id: 'old', actual: 120 }] };
   const remote = { closings: [] };
   const result = mergeBusinessState(base, local, remote);
   assert.deepEqual(result.conflicts, ['closings[old]']);
-  assert.deepEqual(result.state.closings, []);
+  assert.deepEqual(result.state.closings, local.closings);
 });
 
-test('preserva a versão remota editada quando há exclusão local concorrente', () => {
+test('mantém a exclusão local e sinaliza a edição remota concorrente', () => {
   const base = { closings: [{ id: 'old', actual: 100 }] };
   const local = { closings: [] };
   const remote = { closings: [{ id: 'old', actual: 120 }] };
   const result = mergeBusinessState(base, local, remote);
   assert.deepEqual(result.conflicts, ['closings[old]']);
-  assert.deepEqual(result.state.closings, remote.closings);
+  assert.deepEqual(result.state.closings, local.closings);
+});
+
+test('prefere valores locais e sinaliza conflitos em campos de contas a pagar', () => {
+  const base = { payables: { entries: [{ id: 'bill', dueDate: '2026-10-20', updatedAt: 'base' }] } };
+  const local = { payables: { entries: [{ id: 'bill', dueDate: '2026-10-22', paid: false, updatedAt: 'local' }] } };
+  const remote = { payables: { entries: [{ id: 'bill', dueDate: '2026-10-21', paid: true, updatedAt: 'remote' }] } };
+  const result = mergeBusinessState(base, local, remote);
+  assert.deepEqual(result.state.payables.entries, local.payables.entries);
+  assert.deepEqual(result.conflicts, ['payables.entries[bill].dueDate', 'payables.entries[bill].updatedAt', 'payables.entries[bill].paid']);
 });
 
 test('normaliza estado legado sem remover campos operacionais existentes', () => {

@@ -56,12 +56,12 @@ function mergeValue(base, local, remote, path, conflicts) {
       if (localRow === MISSING && remoteRow !== MISSING && baseRow !== MISSING) {
         if (equal(remoteRow, baseRow)) continue;
         conflicts.push(rowPath);
-        output.push(clone(remoteRow));
         continue;
       }
       if (remoteRow === MISSING && localRow !== MISSING && baseRow !== MISSING) {
         if (equal(localRow, baseRow)) continue;
         conflicts.push(rowPath);
+        output.push(clone(localRow));
         continue;
       }
       const merged = mergeValue(baseRow, localRow, remoteRow, rowPath, conflicts);
@@ -71,7 +71,7 @@ function mergeValue(base, local, remote, path, conflicts) {
   }
 
   conflicts.push(path || '$');
-  return clone(remote);
+  return clone(local);
 }
 
 export function mergeBusinessState(baseState, localState, remoteState) {

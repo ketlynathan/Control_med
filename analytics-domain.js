@@ -569,6 +569,7 @@
     const categories = ['Alimentação', 'Transporte', 'Medicamentos', 'Outros / Não classificado'];
     const categoryTotalsCents = Object.fromEntries(categories.map(category => [category, 0]));
     const paymentTotalsCents = { pix: 0, debit: 0, credit: 0, cash: 0, other: 0 };
+    const dailyEntriesCents = new Map();
     const expenseById = new Map();
     let cashEntriesCents = 0, cashExitsCents = 0, methodOverageCents = 0, unclassifiedPaymentCents = 0, detailMismatchCents = 0;
     closings.forEach(closing => {
@@ -576,6 +577,8 @@
       const componentTotal = Object.values(reported).reduce((sum, value) => sum + value, 0);
       const entryTotal = closing.entryTotal === undefined || closing.entryTotal === null ? componentTotal : cents(closing.entryTotal);
       cashEntriesCents += entryTotal;
+      const closingDate = String(closing.date || '').slice(0, 10);
+      dailyEntriesCents.set(closingDate, (dailyEntriesCents.get(closingDate) || 0) + entryTotal);
       Object.entries(reported).forEach(([method, value]) => { paymentTotalsCents[method] += value; });
       const residual = entryTotal - componentTotal;
       if (residual > 0) unclassifiedPaymentCents += residual;
@@ -628,6 +631,7 @@
       linkedPaidDuplicateCents, payableExpenseCents,
       netResultCents: cashEntriesCents - cashExitsCents - payableExpenseCents,
       categoryTotalsCents, paymentTotalsCents,
+      dailyEntriesCents: [...dailyEntriesCents].map(([date, entriesCents]) => ({ date, entriesCents })),
       paymentTotalCents: Object.values(paymentTotalsCents).reduce((sum, value) => sum + value, 0),
       methodOverageCents, unclassifiedPaymentCents, detailMismatchCents, linkedMismatchCount,
     };

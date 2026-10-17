@@ -348,8 +348,18 @@ test('relatório de ciclo soma apenas fechamentos/despesas dentro do intervalo e
     'Alimentação': 500, 'Transporte': 1000, 'Medicamentos': 0, 'Outros / Não classificado': 0,
   });
   assert.deepEqual(result.paymentTotalsCents, { pix: 1000, debit: 2000, credit: 3000, cash: 4000, other: 0 });
+  assert.deepEqual(result.dailyEntriesCents, [{ date: '2026-10-06', entriesCents: 10000 }]);
   assert.equal(result.paidAccountsCents, 2000);
   assert.equal(result.netResultCents, 6500);
+});
+
+test('relatório agrupa entradas por dia em centavos e respeita o intervalo do ciclo', () => {
+  const report = buildFinancialCycleReport({ closings: [
+    { id: 'a', date: '2026-10-06', entryTotal: 12.34 },
+    { id: 'b', date: '2026-10-06', pix: 2, cash: 3 },
+    { id: 'outside', date: '2026-10-05', entryTotal: 99 },
+  ] }, { start: '2026-10-06', end: '2026-11-05' });
+  assert.deepEqual(report.dailyEntriesCents, [{ date: '2026-10-06', entriesCents: 1734 }]);
 });
 
 test('relatório evita dupla subtração somente para vínculos explícitos e confirmados', () => {

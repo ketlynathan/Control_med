@@ -344,6 +344,55 @@ export function useBusinessState() {
     if (dirtyRef.current) await syncToServer();
   }
 
+  async function restoreLocalConflictCopy() {
+    const raw = localStorage.getItem(CONFLICT_DRAFT_KEY);
+    let draft;
+    try { draft = JSON.parse(raw || 'null'); } catch { draft = null; }
+    if (!draft?.state) {
+      setSyncError('A cópia local do conflito não foi encontrada neste dispositivo.');
+      return;
+    }
+    if (!window.confirm('A cópia local será enviada ao servidor e prevalecerá sobre os dados conflitantes. Deseja continuar?')) return;
+
+    const token = sessionRef.current.token;
+    if (!token) {
+      setSyncError('Entre novamente nesta conta antes de restaurar a cópia local.');
+      return;
+    }
+
+    setSyncStatus('loading');
+    try {
+      const response = await apiRequest('/api/state', token);
+      if (sessionRef.current.token !== token) return;
+      const remote = normalizeRemoteState(response.state || defaultBusinessState());
+      const mergeBase = baseStateRef.current || loadServerBaseState() || defaultBusinessState();
+      const merged = mergeBusinessState(mergeBase, draft.state, remote);
+
+      const archiveKey = `${CONFLICT_ARCHIVE_KEY}:${encodeURIComponent(sessionRef.current.email || '')}`;
+      localStorage.setItem(archiveKey, raw);
+      localStorage.removeItem(CONFLICT_DRAFT_KEY);
+      serverVersionRef.current = response.version || null;
+      baseStateRef.current = remote;
+      persistServerBaseState(remote);
+      conflictPathsRef.current = [];
+      setConflictPaths([]);
+      setSyncError('');
+      setCurrentState(merged.state);
+      localRevisionRef.current++;
+      dirtyRef.current = !statesEqual(merged.state, remote);
+      if (dirtyRef.current) {
+        setSyncStatus('saving');
+        scheduleSync(0);
+      } else {
+        setLastSyncedAt(response.updatedAt || new Date().toISOString());
+        setSyncStatus('synced');
+      }
+    } catch (error) {
+      setSyncStatus(error.status === 401 ? 'signed-out' : 'offline');
+      setSyncError(error.message || 'Não foi possível recuperar a cópia mais recente do servidor.');
+    }
+  }
+
   function downloadConflictCopy() {
     const archiveKey = `${CONFLICT_ARCHIVE_KEY}:${encodeURIComponent(sessionRef.current.email || '')}`;
     const raw = localStorage.getItem(CONFLICT_DRAFT_KEY) || localStorage.getItem(archiveKey);
@@ -380,6 +429,7 @@ export function useBusinessState() {
     login,
     logout,
     syncNow,
+    restoreLocalConflictCopy,
     downloadConflictCopy,
     clearConflictNotice,
   };

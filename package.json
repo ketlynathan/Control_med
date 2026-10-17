@@ -10,12 +10,13 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.7.0",
-    "pg": "^8.11.5",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.468.0",
+    "pg": "^8.11.5",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "lucide-react": "^0.468.0",
+    "recharts": "^3.10.1",
     "vite": "^6.4.1"
   }
 }

@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import {
   Activity, Boxes, BriefcaseBusiness, CalendarDays, CircleDollarSign, ClipboardList, FileChartColumn,
   LayoutDashboard, LogOut, Menu, RefreshCw, Settings, X,
 } from 'lucide-react';
-import DashboardPage from '../modules/dashboard/DashboardPage.jsx';
 import CashPage from '../modules/cash/CashPage.jsx';
 import PayablesPage from '../modules/payables/PayablesPage.jsx';
 import PharmacyPage from '../modules/pharmacy/PharmacyPage.jsx';
@@ -21,11 +20,12 @@ const pages = [
   { id: 'settings', label: 'Configurações', group: 'Sistema', icon: Settings },
 ];
 
+const DashboardPage = lazy(() => import('../modules/dashboard/DashboardPage.jsx'));
 const pageComponents = { dashboard: DashboardPage, cash: CashPage, payables: PayablesPage, pharmacy: PharmacyPage, agreement: AgreementPage, reports: ReportsPage, settings: SettingsPage };
 const statusLabels = { loading: 'Carregando dados', saving: 'Salvando', synced: 'Sincronizado', offline: 'Sem conexão', error: 'Falha ao salvar', conflict: 'Revisar conflito', 'signed-out': 'Desconectado' };
 
 export default function AppShell(props) {
-  const { state, updateState, session, page, onNavigate, syncStatus, syncError, conflictPaths, lastSyncedAt, syncNow, logout, downloadConflictCopy, clearConflictNotice } = props;
+  const { state, updateState, session, page, onNavigate, syncStatus, syncError, conflictPaths, lastSyncedAt, syncNow, logout, restoreLocalConflictCopy, downloadConflictCopy, clearConflictNotice } = props;
   const [menuOpen, setMenuOpen] = useState(false);
   const currentPage = pages.find(item => item.id === page) || pages[0];
   const Page = pageComponents[currentPage.id];
@@ -66,10 +66,10 @@ export default function AppShell(props) {
           </div>
         </header>
 
-        {syncStatus === 'conflict' && <section className="sync-banner" role="alert"><div><strong>Há alterações concorrentes.</strong><span>{conflictPaths.length ? ` Campos afetados: ${conflictPaths.slice(0, 3).join(', ')}${conflictPaths.length > 3 ? '…' : ''}. A cópia local completa está guardada neste dispositivo.` : 'A cópia local foi guardada neste dispositivo.'}</span></div><div className="banner-actions"><button className="button button-quiet button-small" onClick={downloadConflictCopy}>Baixar cópia local</button><button className="button button-quiet button-small" onClick={clearConflictNotice}>Entendi</button></div></section>}
+        {syncStatus === 'conflict' && <section className="sync-banner" role="alert"><div><strong>Há alterações concorrentes.</strong><span>{conflictPaths.length ? ` Campos afetados: ${conflictPaths.slice(0, 3).join(', ')}${conflictPaths.length > 3 ? '…' : ''}. A cópia local completa está guardada neste dispositivo.` : 'A cópia local foi guardada neste dispositivo.'}</span></div><div className="banner-actions"><button className="button button-quiet button-small" onClick={restoreLocalConflictCopy}>Restaurar cópia local</button><button className="button button-quiet button-small" onClick={downloadConflictCopy}>Baixar cópia local</button><button className="button button-quiet button-small" onClick={clearConflictNotice}>Entendi</button></div></section>}
         {(syncStatus === 'offline' || syncStatus === 'error') && <div className="offline-banner" role="status"><span>{syncError || (syncStatus === 'offline' ? 'Sem conexão. Alterações ficam guardadas neste dispositivo e serão reenviadas ao reconectar.' : 'Não foi possível salvar os dados no servidor. A cópia local permanece neste dispositivo.')}</span><button className="button button-quiet button-small" onClick={syncNow}>Tentar novamente</button></div>}
 
-        <main className="page-content" key={currentPage.id}><Page state={state} updateState={updateState} onNavigate={navigate} syncNow={syncNow} lastSyncedAt={lastSyncedAt} session={session} logout={logout} /></main>
+        <main className="page-content" key={currentPage.id}><Suspense fallback={<div className="module-page" aria-busy="true">Carregando visão geral…</div>}><Page state={state} updateState={updateState} onNavigate={navigate} syncNow={syncNow} lastSyncedAt={lastSyncedAt} session={session} logout={logout} /></Suspense></main>
       </div>
     </div>
   );
