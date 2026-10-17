@@ -43,12 +43,12 @@ test('GET devolve o estado e uma versão que o cliente pode comparar', async () 
   assert.equal(res.body.version, version);
 });
 
-test('PUT atualiza apenas se a versão xmin ainda for igual à versão lida', async () => {
+test('PUT atualiza apenas se a versão persistida ainda for igual à versão lida', async () => {
   let called = false;
   queryHandler = async (sql, values) => {
     called = true;
-    assert.match(sql, /UPDATE business_state SET state = \$2, updated_at = now\(\)/);
-    assert.match(sql, /xmin::text = \$3/);
+    assert.match(sql, /UPDATE business_state SET state = \$2, version = version \+ 1, updated_at = now\(\)/);
+    assert.match(sql, /version = \$3::bigint/);
     assert.equal(values[0], 'test-business');
     assert.deepEqual(values[1].transactions, [{ id: 'new' }]);
     assert.deepEqual(values[1].payables.entries, [{ id: 'rent', amount: 1390.45, paid: false }]);

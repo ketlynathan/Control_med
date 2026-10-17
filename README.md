@@ -1,12 +1,19 @@
 # Fluxo — Controle de Caixa (com backend)
 
-Frontend estático (`index.html`) + backend em **Vercel Functions** (Node.js, pasta `api/`) + banco **Postgres**. Os dados agora ficam num banco de verdade, com login por conta e sincronização entre dispositivos — deixou de depender só do `localStorage` do navegador.
+Frontend modular em **React + Vite** (`src/` e `client/`) + backend em **Vercel Functions** (Node.js, pasta `api/`) + banco **Postgres**. O login e os dados seguem usando as mesmas APIs e a tabela `business_state`.
 
 ## Estrutura
 
 ```
 Control_med/
-├── index.html              ← frontend (tela de login + app)
+├── client/index.html       ← entrada Vite/React
+├── src/
+│   ├── app/                ← autenticação e layout/navegação
+│   ├── modules/            ← dashboard, caixa, contas, estoque, convênio,
+│   │                         relatórios e configurações
+│   ├── services/           ← cliente HTTP da API
+│   └── state/              ← compatibilidade JSON e sincronização concorrente
+├── index.html              ← frontend legado preservado como referência
 ├── api/
 │   ├── auth/register.js    ← POST /api/auth/register
 │   ├── auth/login.js       ← POST /api/auth/login
@@ -16,13 +23,15 @@ Control_med/
 │       ├── db.js           ← conexão com Postgres
 │       └── auth.js         ← hash de senha + JWT
 ├── schema.sql               ← rode uma vez no seu banco
-├── package.json             ← dependências (pg, bcryptjs, jsonwebtoken)
+├── package.json             ← React, Vite e dependências do backend
 └── .env.example              ← modelo das variáveis de ambiente
 ```
 
 O projeto fica na raiz do repositório porque o Vercel está conectado à raiz da branch `main`. Manter a aplicação dentro de uma subpasta faria o deploy retornar `404`.
 
-Como funciona: cada negócio cria uma conta (e-mail + senha). O app guarda um token de sessão (JWT) no dispositivo e sincroniza automaticamente (~1s depois de qualquer alteração) o estado inteiro do caixa com a tabela `business_state` no Postgres. Se a internet cair, os dados continuam salvos localmente e tentam sincronizar na próxima alteração.
+Como funciona: cada negócio cria uma conta (e-mail + senha). O app guarda o mesmo token de sessão (`fluxo-auth-token-v1`) e o mesmo cache legado (`fluxo-controle-caixa-v1`) no dispositivo. As mudanças são salvas localmente e enviadas para `business_state`; os outros dispositivos consultam a versão central a cada 8 segundos e ao reconectar ou voltar à aba.
+
+**Migração segura:** não houve alteração no schema, tabelas, IDs de negócio nem formato dos registros operacionais. O estado JSON existente é normalizado sem remover campos desconhecidos. No primeiro acesso, linhas locais com IDs ausentes no servidor são combinadas com os dados remotos; mudanças concorrentes em campos diferentes também são combinadas. Conflitos no mesmo campo preferem a versão do servidor e arquivam a cópia local neste dispositivo, com opção para baixá-la. Antes de migrar, entre na versão atual com conexão ativa e confirme que o status está sincronizado; mantenha um backup exportado em Configurações.
 
 ---
 
@@ -77,7 +86,7 @@ O modelo usado é `llama-3.3-70b-versatile`, chamado pela API compatível com Op
 3. **Suba este projeto para um repositório Git** (GitHub, por exemplo).
 4. **Importe o repositório na Vercel** em [vercel.com/new](https://vercel.com/new).
 5. Antes de clicar em Deploy (ou logo depois, em Project Settings), **adicione as variáveis de ambiente** `DATABASE_URL` e `JWT_SECRET`.
-6. Deploy. A Vercel detecta `index.html` como site estático e os arquivos em `api/` como funções serverless automaticamente — não precisa configurar build command nem output directory.
+6. Deploy. A Vercel executa `npm run build` e publica `public/`; as funções de `api/` e as variáveis de ambiente permanecem na raiz do projeto.
 7. Acesse a URL gerada, clique em **Criar conta**, informe e-mail/senha, e comece a usar. Repita o login em qualquer outro dispositivo com o mesmo e-mail/senha para ver os mesmos dados.
 
 ### Testando localmente antes de publicar (opcional)
@@ -92,7 +101,7 @@ Crie um arquivo `.env` local (baseado em `.env.example`) com sua `DATABASE_URL` 
 ## Limitações importantes desta arquitetura (leia antes de confiar 100% nela)
 
 - **Anexos (fotos/PDF de notas fiscais) e tamanho de payload.** As funções serverless da Vercel recusam corpos de requisição acima de ~4,5MB. O backend bloqueia o envio (erro 413) se o estado sincronizado passar de 4MB — o que pode acontecer rápido se houver vários anexos em base64. Os dados continuam salvos no navegador local mesmo se a sincronização falhar por esse motivo, mas eles não vão para o servidor/outros dispositivos. Para resolver de verdade, o próximo passo seria mover anexos para um storage de arquivos (ex.: Vercel Blob ou S3) e guardar só a URL no banco — posso implementar isso se os anexos forem importantes para o seu uso.
-- **Sincronização "last write wins".** Se duas pessoas editarem o caixa ao mesmo tempo em dispositivos diferentes offline, o último a sincronizar sobrescreve o outro. Para uso com um único caixa por vez isso não costuma ser problema; para múltiplos caixas simultâneos ativos, o ideal seria evoluir para tabelas relacionais por lançamento (não um blob JSON único), com escrita incremental.
+- **Estado ainda é um documento JSON por negócio.** O controle de versão evita gravação cega; o cliente combina alterações independentes por registro e sinaliza conflitos no mesmo campo. Para alta concorrência ou múltiplos caixas em paralelo, o próximo passo arquitetural seria persistir lançamentos em tabelas relacionais com escrita incremental.
 - **Sessão via JWT de 30 dias.** Não há ainda recuperação de senha por e-mail nem verificação de e-mail — é autenticação simples por e-mail/senha. Se isso for para uso comercial real, recomendo adicionar recuperação de senha antes de distribuir para colaboradores.
 - **`JWT_SECRET` é a chave-mestra de autenticação.** Nunca a exponha publicamente (não vai no código, só na Vercel como variável de ambiente).
 - **"Colar nota" exige login** (mesma proteção do resto do app) para que ninguém de fora consiga gastar créditos da sua chave da Groq. Ainda assim, qualquer colaborador que tenha login no seu Fluxo pode usar o botão — se isso for um problema, dá para restringir por papel do colaborador no futuro.

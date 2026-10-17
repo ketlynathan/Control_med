@@ -4,12 +4,18 @@
   "private": true,
   "description": "Controle de caixa com backend em Vercel Functions + Postgres",
   "scripts": {
-    "build": "rm -rf public && mkdir -p public && cp index.html analytics-domain.js accounting-period.js public/",
+    "dev": "vite --config vite.config.js --host 0.0.0.0",
+    "build": "vite build --config vite.config.js",
     "check": "node --check analytics-domain.js && node --check accounting-period.js && node --check src/domain/entities/user.js && node --check api/_lib/auth.js && node --check api/_lib/db.js && node --check api/auth/login.js && node --check api/auth/register.js && node --check api/state.js && node --check api/extract-entry.js && node --test test/*.test.js test/domain/entities/*.test.js"
   },
   "dependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
     "pg": "^8.11.5",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "lucide-react": "^0.468.0",
+    "vite": "^6.4.1"
   }
 }
