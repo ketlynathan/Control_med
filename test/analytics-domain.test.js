@@ -1,7 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
+<<<<<<< HEAD
 const { cents, getCashBaseForClosing, calculateClosingCashReconciliation, buildFinancialLedger, filterFinancialLedger, buildRegisterSummary, buildModuleMetrics, canEditClosing, buildClosingRevision } = require('../analytics-domain');
+=======
+const { cents, getCashBaseForClosing, calculateClosingCashReconciliation, buildFinancialLedger, filterFinancialLedger, buildRegisterSummary, buildModuleMetrics, canEditClosing, canEditClosingToday, buildClosingRevision, buildFinancialCycleReport, summarizePayablesByCategory, closingExpenseKey } = require('../analytics-domain');
+>>>>>>> origin/main
 
 const state = {
   transactions: [
@@ -61,6 +65,27 @@ test('cards do Caixa excluem Lançamentos, detalham apenas saídas próprias e m
   assert.equal(result.movementExitsCents, 2000);
   assert.equal(result.lastFund.id, 'latest');
   assert.equal(result.lastFund.amount, 114);
+});
+test('cards do Caixa aplicam o período selecionado a entradas, saídas e último fundo', () => {
+  const result = buildRegisterSummary({
+    transactions: [{ id: 'outside', type: 'entrada', amount: 999, date: '2026-10-10' }],
+    closings: [
+      { id: 'sep', date: '2026-09-20', entryTotal: 100, exitTotal: 20, expenses: [{ amount: 20 }] },
+      { id: 'prior-count', date: '2026-09-30', register: '', actual: 50 },
+      { id: 'oct', date: '2026-10-07', entryTotal: 250, exitTotal: 35, expenses: [{ amount: 35 }] },
+    ],
+    openings: [
+      { id: 'sep-fund', date: '2026-09-20', amount: 50 },
+      { id: 'oct-fund', date: '2026-10-07', amount: 94 },
+    ],
+  }, { range: { start: '2026-10-06', end: '2026-11-05' } });
+
+  assert.equal(result.cashEntriesCents, 25000);
+  assert.equal(result.cashExitsCents, 3500);
+  assert.equal(result.cashBalanceCents, 21500);
+  assert.equal(result.lastFund.id, 'oct-fund');
+  assert.equal(result.fundsCents, 0);
+  assert.equal(result.filteredLedger.pendingFundCents, 9400);
 });
 
 test('base do fechamento usa a contagem mais recente, não soma fundos diários', () => {
@@ -234,7 +259,11 @@ test('Caixa, Lançamentos, Contas, Estoque e Convênio permanecem fontes separad
   assert.equal(result.convenio.total, 1000);
 });
 
+<<<<<<< HEAD
 test('interface Caixa não lista Lançamentos, permite retificação histórica auditada e não mostra Excluir', () => {
+=======
+test('interface Caixa mantém dados isolados, permite editar o histórico e não oferece exclusão de fechamento', () => {
+>>>>>>> origin/main
   const html = readFileSync(require.resolve('../index.html'), 'utf8');
   const cashPage = html.slice(html.indexOf('<section class="page" id="page-register">'), html.indexOf('<section class="page" id="page-analytics">'));
   const cashCards = html.slice(html.indexOf('function renderCashCards()'), html.indexOf('function movementTable('));
@@ -244,6 +273,7 @@ test('interface Caixa não lista Lançamentos, permite retificação histórica 
   for (const header of ['Entradas', 'Saídas', 'Contado', 'Detalhes']) assert.match(closingHistory, new RegExp(`<th>${header}<\\/th>`));
   assert.doesNotMatch(closingHistory, /closing-delete|Excluir/);
   assert.doesNotMatch(cashPage, /Lançamentos|registerUserSummary|registerMovementHistory/);
+<<<<<<< HEAD
   assert.doesNotMatch(cashCards, /state\.transactions|Movimentos registrados|lançamento\(s\)/);
   assert.match(html, /closingsTable'\)\.addEventListener\('click'/);
   assert.match(html, /canEditClosing\(c\)\?`<button class="btn btn-ghost btn-sm closing-edit[^`]*>Editar<\/button>`/);
@@ -259,6 +289,35 @@ test('fechamentos históricos com ID e data válidos podem ser retificados', () 
   assert.equal(canEditClosing({ date: '2026-10-04' }), false);
   assert.equal(canEditClosing({ id: 'invalid-date', date: '04/10/2026' }), false);
   assert.equal(canEditClosing(null), false);
+=======
+  assert.doesNotMatch(html, /closing-delete/);
+  assert.doesNotMatch(cashCards, /state\.transactions|Movimentos registrados|lançamento\(s\)/);
+  assert.match(html, /closingsTable'\)\.addEventListener\('click'/);
+  assert.match(html, /startEditClosing\(b\.dataset\.id\)/);
+  assert.doesNotMatch(html, /deleteWithAudit\('closing'/);
+  assert.match(html, /canEditClosing\(c\)\?`<button class="btn btn-ghost btn-sm closing-edit/);
+  assert.match(html, /function startEditClosing\(id\)[\s\S]*?canEditClosing\(c\)/);
+  assert.match(html, /function upsertClosing\(obj, coll\)[\s\S]*?canEditClosing\(state\.closings\[i\]\)/);
+  assert.match(html, /Fechamento histórico corrigido/);
+  assert.match(html, /function mergeLocalChangesIntoServer\(serverState, localState\)/);
+  assert.match(html, /const hadLocalChangesBeforeRemote = localChangeRevision > lastServerChangeRevision/);
+  assert.match(html, /const shouldMergeLocal = hadLocalChangesBeforeRemote \|\| localRowsMissingRemotely/);
+  assert.match(html, /if \(shouldMergeLocal \|\| recoveredLocalPayables\)[\s\S]*?await syncStateToServer\(\)/);
+});
+
+test('qualquer fechamento histórico com ID e data válidos pode receber retificação auditada', () => {
+  assert.equal(canEditClosing({ id: 'old', date: '2026-01-01' }), true);
+  assert.equal(canEditClosing({ date: '2026-01-01' }), false);
+  assert.equal(canEditClosing({ id: 'invalid', date: '01/01/2026' }), false);
+  assert.equal(canEditClosing(null), false);
+});
+
+test('helper legado de elegibilidade no mesmo dia permanece retrocompatível', () => {
+  assert.equal(canEditClosingToday({ id: 'today', date: '2026-10-05' }, '2026-10-05'), true);
+  assert.equal(canEditClosingToday({ id: 'yesterday', date: '2026-10-04' }, '2026-10-05'), false);
+  assert.equal(canEditClosingToday({ date: '2026-10-05' }, '2026-10-05'), false);
+  assert.equal(canEditClosingToday(null, '2026-10-05'), false);
+>>>>>>> origin/main
 });
 
 test('retificação mantém a versão anterior, ID e data de criação do fechamento', () => {
@@ -281,4 +340,87 @@ test('Contas a pagar oferece atualização manual sem sair do módulo e preserva
   assert.match(html, /function savePayable\(event\)[\s\S]*?saveState\(\)/);
   assert.match(html, /function handlePayableAction\(event\)[\s\S]*?saveState\(\)/);
   assert.match(html, /setInterval\(refreshServerStateIfChanged, 15000\)/);
+});
+
+test('interface remove Lançamentos e Conciliação sem remover os dados históricos usados pelo ledger', () => {
+  const html = readFileSync(require.resolve('../index.html'), 'utf8');
+  assert.doesNotMatch(html, /data-page="movements"|data-page="reconciliation"/);
+  assert.doesNotMatch(html, /id="page-movements"|id="page-reconciliation"/);
+  assert.match(html, /transactions: Array\.isArray\(serverState\.transactions\) \? serverState\.transactions/);
+  assert.match(html, /transactions: parsed\.transactions \|\| \[\]/);
+  assert.match(html, /normalized\.currentPage === 'movements' \|\| normalized\.currentPage === 'reconciliation'\) normalized\.currentPage = 'dashboard'/);
+  assert.match(html, /function updateAll\(\) \{[^}]*renderReports\(\)/);
+  assert.match(html, /Despesas do Caixa por categoria/);
+  assert.match(html, /Comparativo entre ciclos/);
+  assert.doesNotMatch(html, /Marcar filtrados como conferidos|Marcar um lançamento após validar/);
+});
+
+test('relatório de ciclo soma apenas fechamentos/despesas dentro do intervalo e preserva fundo fora do cálculo', () => {
+  const result = buildFinancialCycleReport({
+    transactions: [{ type: 'entrada', amount: 50000, date: '2026-10-07' }],
+    openings: [{ amount: 999, date: '2026-10-07' }],
+    closings: [
+      { id: 'oct6', date: '2026-10-06', entryTotal: 100, pix: 10, debit: 20, credit: 30, cash: 40, exitTotal: 15, expenses: [{ description: 'Almoço', amount: 5 }, { description: 'Uber', amount: 10 }] },
+      { id: 'oct5', date: '2026-10-05', entryTotal: 80, pix: 0, debit: 0, credit: 0, cash: 80, exitTotal: 3, expenses: [{ description: 'Remédio', amount: 3 }] },
+    ],
+    payables: { entries: [{ id: 'p1', paid: true, paidAt: '2026-10-07T12:00:00Z', amount: 20 }] },
+  }, { start: '2026-10-06', end: '2026-11-05' });
+  assert.equal(result.closingCount, 1);
+  assert.equal(result.cashEntriesCents, 10000);
+  assert.equal(result.cashExitsCents, 1500);
+  assert.equal(result.cashBalanceCents, 8500);
+  assert.deepEqual(result.categoryTotalsCents, {
+    'Alimentação': 500, 'Transporte': 1000, 'Medicamentos': 0, 'Outros / Não classificado': 0,
+  });
+  assert.deepEqual(result.paymentTotalsCents, { pix: 1000, debit: 2000, credit: 3000, cash: 4000, other: 0 });
+  assert.equal(result.paidAccountsCents, 2000);
+  assert.equal(result.netResultCents, 6500);
+});
+
+test('relatório evita dupla subtração somente para vínculos explícitos e confirmados', () => {
+  const state = {
+    closings: [{ id: 'c1', date: '2026-10-06', entryTotal: 100, cash: 100, exitTotal: 25, expenses: [{ id: 'e1', description: 'Compra', amount: 25 }] }],
+    payables: { entries: [
+      { id: 'p1', paid: true, paidAt: '2026-10-06', amount: 25, relatedCashExpenseId: 'e1' },
+      { id: 'p2', paid: true, paidAt: '2026-10-06', amount: 30 },
+    ] },
+  };
+  const result = buildFinancialCycleReport(state, { start: '2026-10-06', end: '2026-11-05' });
+  assert.equal(result.linkedPaidDuplicateCents, 2500);
+  assert.equal(result.payableExpenseCents, 3000);
+  assert.equal(result.netResultCents, 4500);
+});
+
+test('relatório não inventa forma de pagamento para diferenças não classificadas e reconcilia categorias com saídas detalhadas', () => {
+  const report = buildFinancialCycleReport({ closings: [{
+    id: 'cycle-1', date: '2026-10-06', entryTotal: 100, pix: 40, debit: 40, credit: 0, cash: 0,
+    exitTotal: 12, expenses: [{ description: 'Merenda', amount: 10 }, { description: 'Item sem categoria', amount: 2 }],
+  }] }, { start: '2026-10-06', end: '2026-11-05' });
+  assert.equal(report.cashEntriesCents, 10000);
+  assert.equal(report.cashExitsCents, 1200);
+  assert.equal(report.paymentTotalCents, 8000);
+  assert.equal(report.unclassifiedPaymentCents, 2000);
+  assert.equal(Object.values(report.categoryTotalsCents).reduce((sum, value) => sum + value, 0), report.cashExitsCents);
+  assert.equal(report.categoryTotalsCents['Outros / Não classificado'], 200);
+});
+
+test('ID determinístico mantém vínculo da despesa estável e distingue itens repetidos', () => {
+  const closing = { id: 'closing', expenses: [{ description: 'Compra', amount: 12 }, { description: 'Compra', amount: 12 }] };
+  assert.equal(closingExpenseKey(closing, 0), closingExpenseKey(closing, 0));
+  assert.notEqual(closingExpenseKey(closing, 0), closingExpenseKey(closing, 1));
+  assert.equal(closingExpenseKey(closing, 2), '');
+});
+
+test('Contas a Pagar mostra contagem e valores pagos/pendentes em colunas independentes', () => {
+  const result = summarizePayablesByCategory([
+    { category: 'Fornecedor', amount: 100, paid: true },
+    { category: 'Fornecedor', amount: 40, paid: false },
+    { category: 'Aluguel', amount: 250, paid: false },
+  ]);
+  assert.deepEqual(result.total, { count: 3, totalCents: 39000, paidCount: 1, paidCents: 10000, pendingCount: 2, pendingCents: 29000 });
+  const supplier = result.rows.find(row => row.category === 'Fornecedor');
+  assert.equal(supplier.count, 2);
+  assert.equal(supplier.totalCents, 14000);
+  assert.equal(supplier.paidCents, 10000);
+  assert.equal(supplier.pendingCents, 4000);
 });

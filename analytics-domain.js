@@ -7,7 +7,7 @@
   };
   const amount = value => cents(value) / 100;
   const clean = value => String(value ?? '').trim();
-  const within = (date, range) => !!date && (!range.start || date >= range.start) && (!range.end || date <= range.end);
+  const within = (date, range = {}) => (!range.start && !range.end) || (!!date && (!range.start || date >= range.start) && (!range.end || date <= range.end));
   const sumCents = (items, selector) => items.reduce((total, item) => total + cents(selector(item)), 0);
   const sumValuesCents = (items, selector) => items.reduce((total, item) => total + (Number(selector(item)) || 0), 0);
   const hasFilter = value => value != null && value !== '' && value !== 'all';
@@ -47,6 +47,17 @@
     if (/mercadoria|compras?|loja|mutirao/.test(text)) return 'Mercadorias';
     if (/merenda|cafe|almoco|lanche|pao|comida|fruta|queijo|agua|coca/.test(text)) return 'Alimentação';
     return 'Outros / Não classificado';
+  }
+
+  function closingExpenseKey(closing, index) {
+    const expenses = Array.isArray(closing?.expenses) ? closing.expenses : [];
+    const expense = expenses[index];
+    if (!expense) return '';
+    if (clean(expense.id)) return `cash-expense:${clean(expense.id)}`;
+    const description = normalizedDescription(expense.description);
+    const valueCents = cents(expense.amount);
+    const occurrence = expenses.slice(0, index).filter(item => normalizedDescription(item.description) === description && cents(item.amount) === valueCents).length;
+    return `cash-expense:${encodeURIComponent(String(closing.id || ''))}:${encodeURIComponent(description)}:${valueCents}:${occurrence}`;
   }
 
   function buildFinancialLedger(state = {}) {
@@ -385,21 +396,24 @@
     };
   }
 
-  function buildRegisterSummary(state = {}) {
+  function buildRegisterSummary(state = {}, filters = {}) {
     const openings = Array.isArray(state.openings) ? state.openings : [];
     const ledger = buildFinancialLedger(state);
-    const movementEntriesCents = sumValuesCents(ledger.confirmedRecords.filter(row => row.type === 'entrada' && row.sourceModule === 'financial_transactions'), row => row.valueCents);
-    const movementExitsCents = sumValuesCents(ledger.confirmedRecords.filter(row => row.type === 'saida' && row.sourceModule === 'financial_transactions'), row => row.valueCents);
-    const closingEntriesCents = sumValuesCents(ledger.confirmedRecords.filter(row => row.type === 'entrada' && row.sourceModule === 'cash_closings'), row => row.valueCents);
-    const closingExitsCents = sumValuesCents(ledger.confirmedRecords.filter(row => row.type === 'saida' && row.sourceModule !== 'financial_transactions' && row.sourceModule !== 'payables' && row.sourceModule !== 'inventory' && row.sourceModule !== 'convenio'), row => row.valueCents);
+    const filtered = filterFinancialLedger(ledger, filters);
+    const movementEntriesCents = filtered.movementEntriesCents;
+    const movementExitsCents = filtered.movementExitsCents;
+    const closingEntriesCents = filtered.cashEntriesCents;
+    const closingExitsCents = filtered.cashExitsCents;
     const financialTransactionsEntriesCents = movementEntriesCents;
     const financialTransactionsExitsCents = movementExitsCents;
-    const lastFund = openings.slice().sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')) || String(b.id || '').localeCompare(String(a.id || '')))[0] || null;
+    const range = filters.range || { start: '', end: '' };
+    const filteredOpenings = openings.filter(row => within(row.date, range) && registerMatches(row, filters.register || 'all') && userMatches({ collaborator: row.collaborator }, filters.user || 'all'));
+    const lastFund = filteredOpenings.slice().sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || String(b.createdAt || '').localeCompare(String(a.createdAt || '')) || String(b.id || '').localeCompare(String(a.id || '')))[0] || null;
     const entriesCents = closingEntriesCents;
     const exitsCents = closingExitsCents;
-    const fundEventsCents = ledger.totals.fundEventsCents;
-    const fundsCents = ledger.totals.fundsCents;
-    const possibleFundCents = Math.max(0, fundEventsCents - fundsCents - sumValuesCents(ledger.records.filter(row => row.type === 'transferencia' && row.sourceModule === 'cash_openings'), row => row.valueCents));
+    const fundEventsCents = filtered.fundEventsCents;
+    const fundsCents = filtered.fundsCents;
+    const possibleFundCents = Math.max(0, fundEventsCents - fundsCents - sumValuesCents(filtered.records.filter(row => row.type === 'transferencia' && row.sourceModule === 'cash_openings'), row => row.valueCents));
     return {
       movementEntriesCents: financialTransactionsEntriesCents,
       closingEntriesCents,
@@ -416,6 +430,7 @@
       duplicatePairs: ledger.possibleDuplicates,
       lastFund,
       ledger,
+      filteredLedger: filtered,
     };
   }
 
@@ -539,6 +554,105 @@
 
   function canEditClosing(closing) {
     return !!closing && !!clean(closing.id) && /^\d{4}-\d{2}-\d{2}$/.test(String(closing.date || ''));
+<<<<<<< HEAD
+=======
+  }
+
+  function canEditClosingToday(closing, today = new Date().toISOString().slice(0, 10)) {
+    return canEditClosing(closing) && closing.date === today;
+  }
+
+  function buildFinancialCycleReport(state = {}, range = {}) {
+    const inside = value => {
+      const date = String(value || '').slice(0, 10);
+      return !!date && (!range.start || date >= range.start) && (!range.end || date <= range.end);
+    };
+    const closings = (Array.isArray(state.closings) ? state.closings : []).filter(row => inside(row.date));
+    const categories = ['Alimentação', 'Transporte', 'Medicamentos', 'Outros / Não classificado'];
+    const categoryTotalsCents = Object.fromEntries(categories.map(category => [category, 0]));
+    const paymentTotalsCents = { pix: 0, debit: 0, credit: 0, cash: 0, other: 0 };
+    const expenseById = new Map();
+    let cashEntriesCents = 0, cashExitsCents = 0, methodOverageCents = 0, unclassifiedPaymentCents = 0, detailMismatchCents = 0;
+    closings.forEach(closing => {
+      const reported = { pix: cents(closing.pix), debit: cents(closing.debit), credit: cents(closing.credit), cash: cents(closing.cash), other: cents(closing.otherPayment ?? closing.other) };
+      const componentTotal = Object.values(reported).reduce((sum, value) => sum + value, 0);
+      const entryTotal = closing.entryTotal === undefined || closing.entryTotal === null ? componentTotal : cents(closing.entryTotal);
+      cashEntriesCents += entryTotal;
+      Object.entries(reported).forEach(([method, value]) => { paymentTotalsCents[method] += value; });
+      const residual = entryTotal - componentTotal;
+      if (residual > 0) unclassifiedPaymentCents += residual;
+      else if (residual < 0) methodOverageCents += Math.abs(residual);
+
+      const hasExpenseDetails = Array.isArray(closing.expenses) && closing.expenses.length > 0;
+      const expenses = hasExpenseDetails ? closing.expenses : [];
+      const detailedTotal = expenses.reduce((sum, expense) => sum + cents(expense.amount), 0);
+      const hasStoredExitTotal = closing.exitTotal !== undefined && closing.exitTotal !== null && closing.exitTotal !== '';
+      const storedExitCents = hasStoredExitTotal ? cents(closing.exitTotal) : detailedTotal;
+      const residualCents = storedExitCents - detailedTotal;
+      if (hasExpenseDetails) detailMismatchCents += residualCents;
+      const closingExitCents = hasExpenseDetails ? detailedTotal : storedExitCents;
+      cashExitsCents += closingExitCents;
+      if (!hasExpenseDetails && closingExitCents > 0) categoryTotalsCents['Outros / Não classificado'] += closingExitCents;
+      expenses.forEach((expense, index) => {
+        const sourceId = `closing-expense:${String(closing.id || '')}:${index}`;
+        const overrides = state.analyticsCategories || {};
+        const inferred = inferExpenseCategory(expense.description, overrides[sourceId] || expense.category);
+        const category = categories.includes(inferred) ? inferred : 'Outros / Não classificado';
+        categoryTotalsCents[category] += cents(expense.amount);
+        const id = String(expense.id || sourceId);
+        expenseById.set(id, { id, amountCents: cents(expense.amount), expense });
+        expenseById.set(sourceId, { id: sourceId, amountCents: cents(expense.amount), expense });
+        expenseById.set(closingExpenseKey(closing, index), { id: closingExpenseKey(closing, index), amountCents: cents(expense.amount), expense });
+      });
+    });
+
+    const paidAccounts = (Array.isArray(state.payables?.entries) ? state.payables.entries : [])
+      .filter(row => row.paid && inside(row.paidAt || row.dueDate));
+    const paidAccountsCents = paidAccounts.reduce((sum, row) => sum + cents(row.amount), 0);
+    const linkedExpenseIds = new Set();
+    let linkedPaidDuplicateCents = 0, linkedMismatchCount = 0;
+    paidAccounts.forEach(payable => {
+      const payableId = String(payable.id || '');
+      const explicitId = String(payable.relatedCashExpenseId || payable.cashExpenseId || payable.closingExpenseId || '');
+      const candidate = explicitId ? expenseById.get(explicitId) : [...expenseById.values()].find(item =>
+        String(item.expense.payableId || item.expense.relatedPayableId || '') === payableId);
+      if (!candidate) return;
+      if (linkedExpenseIds.has(candidate.id)) { linkedMismatchCount++; return; }
+      if (candidate.amountCents !== cents(payable.amount)) { linkedMismatchCount++; return; }
+      linkedExpenseIds.add(candidate.id);
+      linkedPaidDuplicateCents += candidate.amountCents;
+    });
+    const payableExpenseCents = Math.max(0, paidAccountsCents - linkedPaidDuplicateCents);
+    return {
+      closingCount: closings.length, cashEntriesCents, cashExitsCents,
+      cashBalanceCents: cashEntriesCents - cashExitsCents,
+      paidAccountsCount: paidAccounts.length, paidAccountsCents,
+      linkedPaidDuplicateCents, payableExpenseCents,
+      netResultCents: cashEntriesCents - cashExitsCents - payableExpenseCents,
+      categoryTotalsCents, paymentTotalsCents,
+      paymentTotalCents: Object.values(paymentTotalsCents).reduce((sum, value) => sum + value, 0),
+      methodOverageCents, unclassifiedPaymentCents, detailMismatchCents, linkedMismatchCount,
+    };
+  }
+
+  function summarizePayablesByCategory(entries = []) {
+    const groups = new Map();
+    (Array.isArray(entries) ? entries : []).forEach(entry => {
+      const category = clean(entry.category) || 'Outros / Não classificado';
+      if (!groups.has(category)) groups.set(category, { category, count: 0, totalCents: 0, paidCount: 0, paidCents: 0, pendingCount: 0, pendingCents: 0 });
+      const row = groups.get(category), value = cents(entry.amount);
+      row.count++; row.totalCents += value;
+      if (entry.paid === true) { row.paidCount++; row.paidCents += value; }
+      else { row.pendingCount++; row.pendingCents += value; }
+    });
+    const rows = [...groups.values()].sort((a, b) => a.category.localeCompare(b.category, 'pt-BR'));
+    const total = rows.reduce((sum, row) => ({
+      count: sum.count + row.count, totalCents: sum.totalCents + row.totalCents,
+      paidCount: sum.paidCount + row.paidCount, paidCents: sum.paidCents + row.paidCents,
+      pendingCount: sum.pendingCount + row.pendingCount, pendingCents: sum.pendingCents + row.pendingCents,
+    }), { count: 0, totalCents: 0, paidCount: 0, paidCents: 0, pendingCount: 0, pendingCents: 0 });
+    return { rows, total };
+>>>>>>> origin/main
   }
 
   function buildClosingRevision(closing, changes, updatedAt = new Date().toISOString()) {
@@ -548,7 +662,11 @@
     return { before, after };
   }
 
+<<<<<<< HEAD
   const api = { cents, amount, inferExpenseCategory, buildFinancialLedger, filterFinancialLedger, getCashBaseForClosing, calculateClosingCashReconciliation, buildRegisterSummary, buildModuleMetrics, canEditClosing, buildClosingRevision, expenseCategories };
+=======
+  const api = { cents, amount, inferExpenseCategory, closingExpenseKey, buildFinancialLedger, filterFinancialLedger, getCashBaseForClosing, calculateClosingCashReconciliation, buildRegisterSummary, buildModuleMetrics, canEditClosing, canEditClosingToday, buildClosingRevision, buildFinancialCycleReport, summarizePayablesByCategory, expenseCategories };
+>>>>>>> origin/main
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.FinanceAnalytics = api;
 })(typeof globalThis !== 'undefined' ? globalThis : window);
