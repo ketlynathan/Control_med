@@ -255,7 +255,7 @@ test('Caixa, Lançamentos, Contas, Estoque e Convênio permanecem fontes separad
   assert.equal(result.convenio.total, 1000);
 });
 
-test('interface Caixa não lista Lançamentos, permite retificação histórica auditada e não mostra Excluir', () => {
+test('interface legada Caixa não lista Lançamentos e mantém o histórico sem exclusão', () => {
   const html = readFileSync(require.resolve('../index.html'), 'utf8');
   const cashPage = html.slice(html.indexOf('<section class="page" id="page-register">'), html.indexOf('<section class="page" id="page-analytics">'));
   const cashCards = html.slice(html.indexOf('function renderCashCards()'), html.indexOf('function movementTable('));
@@ -278,6 +278,16 @@ test('interface Caixa não lista Lançamentos, permite retificação histórica 
   assert.match(html, /const hadLocalChangesBeforeRemote = localChangeRevision > lastServerChangeRevision/);
   assert.match(html, /const shouldMergeLocal = hadLocalChangesBeforeRemote \|\| localRowsMissingRemotely/);
   assert.match(html, /if \(shouldMergeLocal \|\| recoveredLocalPayables\)[\s\S]*?await syncStateToServer\(\)/);
+});
+
+test('interface React do Caixa permite excluir e registra motivo, autor e snapshots', () => {
+  const cashPage = readFileSync(require.resolve('../src/modules/cash/CashPage.jsx'), 'utf8');
+  assert.match(cashPage, /function deleteClosing\(row\)/);
+  assert.match(cashPage, /Motivo para excluir o fechamento/);
+  assert.match(cashPage, /action: 'delete-closing'[\s\S]*?performedBy: person\.name[\s\S]*?reason: reason\.trim\(\)[\s\S]*?closingBefore: row[\s\S]*?closingAfter: null/);
+  assert.match(cashPage, /Motivo da retificação.*required/);
+  assert.match(cashPage, /actionLabel: 'Fechamento retificado'[\s\S]*?before: revision\.before[\s\S]*?after: revision\.after/);
+  assert.match(cashPage, /Fundo de caixa editado'[\s\S]*?reason,[\s\S]*?before: previous,[\s\S]*?after: saved/);
 });
 
 test('fechamentos históricos com ID e data válidos podem ser retificados', () => {

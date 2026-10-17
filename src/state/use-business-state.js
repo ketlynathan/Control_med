@@ -4,6 +4,7 @@ import { mergeBusinessState, statesEqual } from './merge-business-state.js';
 import {
   AUTH_EMAIL_KEY,
   AUTH_TOKEN_KEY,
+  CONFLICT_ARCHIVE_KEY,
   CONFLICT_DRAFT_KEY,
   defaultBusinessState,
   loadCachedBusinessState,
