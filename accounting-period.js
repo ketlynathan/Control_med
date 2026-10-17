@@ -1,6 +1,7 @@
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.AccountingPeriod = factory();
+  const api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  root.AccountingPeriod = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   function iso(value) {
     if (value instanceof Date) {

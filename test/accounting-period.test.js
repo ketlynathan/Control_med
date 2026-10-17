@@ -1,6 +1,11 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { key, range, label, contains, shift } = require('../accounting-period');
+const accountingPeriod = require('../accounting-period');
+const { key, range, label, contains, shift } = accountingPeriod;
+
+test('expõe o utilitário global usado pelo front React', () => {
+  assert.strictEqual(globalThis.AccountingPeriod, accountingPeriod);
+});
 
 test('ciclo contábil: dias 06 ao fim pertencem ao mês iniciado no dia 06', () => {
   assert.equal(key('2026-10-06'), '2026-10');
