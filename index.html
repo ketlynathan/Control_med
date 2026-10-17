@@ -918,17 +918,10 @@
         qs('#registerSummaryCards').innerHTML = `<div class="stat-card"><div class="stat-top"><span>Caixa · total de entradas</span><span class="stat-icon icon-green">↗</span></div><div id="registerTotalEntries" class="stat-value">${fmtCents(cashEntriesCents)}</div><div class="stat-foot">Somente entradas dos fechamentos de caixa no período</div></div><div class="stat-card"><div class="stat-top"><span>Caixa · total de saídas</span><span class="stat-icon icon-red">↘</span></div><div id="registerTotalExits" class="stat-value">${fmtCents(cashExitsCents)}</div><div class="stat-foot">Somente despesas lançadas dentro do módulo Caixa no período</div></div><div class="stat-card"><div class="stat-top"><span>Caixa · saldo (entradas − saídas)</span><span class="stat-icon icon-blue">=</span></div><div id="registerBalance" class="stat-value amount ${balanceTone}">${fmtCents(cashBalanceCents)}</div><div class="stat-foot">Saldo aritmético do Caixa no período selecionado</div></div><div class="stat-card"><div class="stat-top"><span>Último fundo registrado</span><span class="stat-icon icon-amber">◈</span></div><div id="registerLastFund" class="stat-value">${fund ? fmtCents(window.FinanceAnalytics.cents(fund.amount)) : '—'}</div><div class="stat-foot">${esc(fundLabel)}; aporte novo confirmado: ${fmtCents(summary.fundsCents)} · pendente: ${fmtCents(summary.filteredLedger.pendingFundCents)}</div></div>`;
         populateClosingRegisters();
         const date=qs('#closingDate').value || todayISO(); updateExpectedNotice(date);
-<<<<<<< HEAD
-        const closes=[...(state.closings||[])].sort((a,b)=>(b.date+(b.closedAt||'')).localeCompare(a.date+(a.closedAt||'')));
-        qs('#closingsTable').innerHTML=closes.length?`<table><thead><tr><th>Data</th><th>Responsável</th><th>Caixa de origem</th><th>Entradas</th><th>Saídas</th><th>Contado</th><th>Detalhes</th><th></th></tr></thead><tbody>${closes.map(c=>{return `<tr><td>${fmtDate(c.date)}</td><td>${esc(collaboratorName(c.collaborator))}</td><td>${esc(registerName(c.register))}</td><td class="amount in">${fmtBRL(c.entryTotal || 0)}</td><td class="amount out">${fmtBRL(c.exitTotal || 0)}</td><td>${fmtBRL(c.actual)}</td><td>${Array.isArray(c.expenses)&&c.expenses.length?c.expenses.map(item=>`${esc(item.description)}: ${fmtBRL(item.amount)}`).join('<br>'):(esc(c.notes)||'—')}</td><td>${window.FinanceAnalytics.canEditClosing(c)?`<button class="btn btn-ghost btn-sm closing-edit" type="button" data-id="${esc(c.id)}">Editar</button>`:'—'}</td></tr>`;}).join('')}</tbody></table>`:'<div class="empty"><div class="empty-icon">✓</div><b>Nenhum fechamento registrado</b><span>Faça a conferência do caixa ao final do turno.</span></div>';
-        const opens=[...(state.openings||[])].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-        qs('#openingsTable').innerHTML=opens.length?`<table><thead><tr><th>Data</th><th>Responsável</th><th>Caixa de origem</th><th>Valor disponível</th><th>Natureza</th><th>Observação</th><th></th></tr></thead><tbody>${opens.map(o=>{const record=fundRecordById.get(String(o.id));const disposition=record?.status==='confirmed_contribution'?'Aporte novo confirmado':record?.status==='carried_forward'?'Saldo carregado — não somado':record?.status==='initial_balance'?'Base inicial — contada uma vez':'Histórico pendente de conciliação';const tone=record?.status==='confirmed_contribution'?'in':'';return `<tr><td>${fmtDate(o.date)}</td><td>${esc(collaboratorName(o.collaborator))}</td><td>${esc(registerName(o.register))}</td><td class="amount ${tone}">${fmtBRL(o.amount)}</td><td>${esc(disposition)}</td><td>${esc(o.notes)||'—'}</td><td><button class="btn btn-ghost btn-sm opening-edit" data-id="${esc(o.id)}">Editar</button><button class="btn btn-ghost btn-sm opening-delete" data-id="${esc(o.id)}" style="color:var(--red)">Excluir</button></td></tr>`;}).join('')}</tbody></table>`:'<div class="empty"><div class="empty-icon">◈</div><b>Nenhum fundo registrado</b><span>Registre o valor inicial para controlar o troco.</span></div>';
-=======
         const closes=[...(state.closings||[])].filter(c=>monthKey(c.date)===state.currentMonth).sort((a,b)=>(b.date+(b.closedAt||'')).localeCompare(a.date+(a.closedAt||'')));
         qs('#closingsTable').innerHTML=closes.length?`<table><thead><tr><th>Data</th><th>Responsável</th><th>Caixa de origem</th><th>Entradas</th><th>Saídas</th><th>Contado</th><th>Detalhes</th><th></th></tr></thead><tbody>${closes.map(c=>{return `<tr><td>${fmtDate(c.date)}</td><td>${esc(collaboratorName(c.collaborator))}</td><td>${esc(registerName(c.register))}</td><td class="amount in">${fmtBRL(c.entryTotal || 0)}</td><td class="amount out">${fmtBRL(c.exitTotal || 0)}</td><td>${fmtBRL(c.actual)}</td><td>${Array.isArray(c.expenses)&&c.expenses.length?c.expenses.map(item=>`${esc(item.description)}: ${fmtBRL(item.amount)}`).join('<br>'):(esc(c.notes)||'—')}</td><td>${window.FinanceAnalytics.canEditClosing(c)?`<button class="btn btn-ghost btn-sm closing-edit" type="button" data-id="${esc(c.id)}">Editar</button>`:'—'}</td></tr>`;}).join('')}</tbody></table>`:'<div class="empty"><div class="empty-icon">✓</div><b>Nenhum fechamento registrado</b><span>Faça a conferência do caixa ao final do turno.</span></div>';
         const opens=[...(state.openings||[])].filter(o=>monthKey(o.date)===state.currentMonth).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
         qs('#openingsTable').innerHTML=opens.length?`<table><thead><tr><th>Data</th><th>Responsável</th><th>Caixa de origem</th><th>Valor disponível</th><th>Natureza</th><th>Observação</th><th></th></tr></thead><tbody>${opens.map(o=>{const record=fundRecordById.get(String(o.id));const disposition=record?.status==='confirmed_contribution'?'Aporte novo confirmado':record?.status==='carried_forward'?'Saldo carregado — não somado':record?.status==='initial_balance'?'Base inicial — contada uma vez':'Histórico pendente de classificação';const tone=record?.status==='confirmed_contribution'?'in':'';return `<tr><td>${fmtDate(o.date)}</td><td>${esc(collaboratorName(o.collaborator))}</td><td>${esc(registerName(o.register))}</td><td class="amount ${tone}">${fmtBRL(o.amount)}</td><td>${esc(disposition)}</td><td>${esc(o.notes)||'—'}</td><td><button class="btn btn-ghost btn-sm opening-edit" data-id="${esc(o.id)}">Editar</button><button class="btn btn-ghost btn-sm opening-delete" data-id="${esc(o.id)}" style="color:var(--red)">Excluir</button></td></tr>`;}).join('')}</tbody></table>`:'<div class="empty"><div class="empty-icon">◈</div><b>Nenhum fundo registrado</b><span>Registre o valor inicial para controlar o troco.</span></div>';
->>>>>>> origin/main
         const audit=[...(state.auditLog||[])].sort((a,b)=>(b.timestamp||'').localeCompare(a.timestamp||''));
         qs('#auditTable').innerHTML=audit.length?`<table><thead><tr><th>Data da ação</th><th>Ação</th><th>Versão anterior</th><th>Versão atualizada</th><th>Responsável pela ação</th><th>Motivo</th></tr></thead><tbody>${audit.map(a=>`<tr><td>${fmtDate((a.timestamp||'').slice(0,10))}</td><td class="audit-action">${esc(a.actionLabel||'Alteração auditada')}</td><td>${fmtDate(a.originalDate)} · ${fmtBRL(a.closingBefore?.entryTotal??a.before?.entryTotal??a.entryTotal??0)}${a.closingBefore||a.before?`<details><summary>Ver snapshot anterior</summary><pre style="white-space:pre-wrap;max-width:480px">${esc(JSON.stringify(a.closingBefore||a.before,null,2))}</pre></details>`:''}</td><td>${a.closingAfter?`entrada ${fmtBRL(a.closingAfter.entryTotal||0)} · saída ${fmtBRL(a.closingAfter.exitTotal||0)} · contado ${fmtBRL(a.closingAfter.actual||0)}<details><summary>Ver snapshot atualizado</summary><pre style="white-space:pre-wrap;max-width:480px">${esc(JSON.stringify(a.closingAfter,null,2))}</pre></details>`:'—'}</td><td>${esc(a.performedBy||'Administrador')}</td><td>${esc(a.reason)||'Ação auditada'}</td></tr>`).join('')}</tbody></table>`:'<div class="empty"><div class="empty-icon">⌁</div><b>Nenhuma alteração registrada</b><span>Retificações e exclusões ficarão preservadas aqui para auditoria.</span></div>';
       }
@@ -1044,18 +1037,13 @@
       }
       function startEditClosing(id) {
         const c = state.closings.find(x => x.id === id); if (!c) return;
-<<<<<<< HEAD
         if (!window.FinanceAnalytics.canEditClosing(c)) { notify('Este fechamento não está disponível para edição.', 'error'); return; }
-=======
-        if (!window.FinanceAnalytics.canEditClosing(c)) { notify('Este registro não possui uma data válida para edição.', 'error'); return; }
->>>>>>> origin/main
         editingClosingId = c.id; populateClosingRegisters(); populateCollaborators();
         setValue('closingRegister', c.register); activeRegister = c.register; setValue('closingDate', c.date);
         qs('#closingDate').disabled = true; qs('#closingRegister').disabled = true;
         setValue('closingPix', c.pix || ''); setValue('closingDebit', c.debit || ''); setValue('closingCredit', c.credit || ''); setValue('closingCash', c.cash || '');
         renderClosingExpenses(Array.isArray(c.expenses) && c.expenses.length ? c.expenses : [{}]);
         setValue('closingActual', c.actual); setValue('closingCollaborator', c.collaborator || ''); setValue('closingNotes', c.notes || ''); setValue('closingCode', '');
-<<<<<<< HEAD
         qs('#closingSubmitBtn').textContent = 'Salvar retificação'; qs('#closingEditCancel').style.display = 'block';
         updateExpectedNotice(c.date); qs('#closingForm').scrollIntoView({ behavior: 'smooth', block: 'center' }); notify('Editando fechamento de ' + fmtDate(c.date) + '. Confirme com o código e informe o motivo da retificação.');
       }
@@ -1064,34 +1052,16 @@
         if (i >= 0 && !window.FinanceAnalytics.canEditClosing(state.closings[i])) { notify('Este fechamento não está disponível para retificação.', 'error'); return; }
         const dup = state.closings.find(c => c.id !== obj.id && String(c.register) === String(obj.register) && c.date === obj.date);
         if (dup) { if (i < 0 && confirm(`Já existe um fechamento de ${registerName(obj.register)} em ${fmtDate(obj.date)}. Cada caixa tem um único fechamento por dia. Deseja abrir a edição do fechamento existente para incluir vendas ou ajustes?`)) startEditClosing(dup.id); else if (i >= 0) notify('Já existe outro fechamento deste caixa nesta data. Atualize o fechamento existente.', 'error'); return; }
-=======
-        qs('#closingSubmitBtn').textContent = 'Salvar correção histórica'; qs('#closingEditCancel').style.display = 'block';
-        updateExpectedNotice(c.date); qs('#closingForm').scrollIntoView({ behavior: 'smooth', block: 'center' }); notify('Editando fechamento de ' + fmtDate(c.date) + '. Informe o código e o motivo para salvar.');
-      }
-      function upsertClosing(obj, coll) {
-        const i = state.closings.findIndex(c => c.id === obj.id);
-        if (i >= 0 && !window.FinanceAnalytics.canEditClosing(state.closings[i])) { notify('Este registro não possui uma data válida para edição.', 'error'); return; }
-        const dup = state.closings.find(c => c.id !== obj.id && String(c.register) === String(obj.register) && c.date === obj.date);
-        if (dup) { if (i < 0 && confirm(`Já existe um fechamento de ${registerName(obj.register)} em ${fmtDate(obj.date)}. Deseja abrir a edição deste fechamento para incluir vendas ou ajustes?`)) startEditClosing(dup.id); else if (i >= 0) notify('Já existe outro fechamento deste caixa nesta data. Atualize o registro existente.', 'error'); return; }
->>>>>>> origin/main
         if (i >= 0) {
           const old = state.closings[i], reason = prompt('Motivo da edição deste fechamento:');
           if (!reason || !reason.trim()) { notify('Informe o motivo para editar o fechamento.', 'error'); return; }
           const timestamp = new Date().toISOString();
           const revision = window.FinanceAnalytics.buildClosingRevision(old, { ...obj, editedAt: timestamp }, timestamp);
-<<<<<<< HEAD
           state.auditLog.push({ id: uid(), timestamp, action: 'edit', actionLabel: 'Fechamento retificado', originalDate: old.date, entryTotal: old.entryTotal || 0, newEntryTotal: revision.after.entryTotal || 0, performedBy: coll.name, reason: `${reason.trim()} (antes: entradas ${fmtBRL(old.entryTotal || 0)}, saídas ${fmtBRL(old.exitTotal || 0)}, contado ${fmtBRL(old.actual)})`, before: revision.before, after: revision.after, closingBefore: revision.before, closingAfter: revision.after });
           state.closings[i] = revision.after;
         } else state.closings.push(obj);
         editingClosingId = null; resetClosingEditUI(); saveState(); updateAll();
         notify(i >= 0 ? 'Fechamento retificado; versão anterior preservada na auditoria.' : 'Fechamento validado e contabilizado automaticamente.');
-=======
-          state.auditLog.push({ id: uid(), timestamp, action: 'edit', actionLabel: 'Fechamento histórico corrigido', originalDate: old.date, entryTotal: old.entryTotal || 0, newEntryTotal: revision.after.entryTotal || 0, performedBy: coll.name, reason: `${reason.trim()} (antes: entradas ${fmtBRL(old.entryTotal || 0)}, saídas ${fmtBRL(old.exitTotal || 0)}, contado ${fmtBRL(old.actual)})`, before: revision.before, after: revision.after, closingBefore: revision.before, closingAfter: revision.after });
-          state.closings[i] = revision.after;
-        } else state.closings.push(obj);
-        editingClosingId = null; resetClosingEditUI(); saveState(); updateAll();
-        notify(i >= 0 ? 'Fechamento atualizado; versão anterior preservada na auditoria.' : 'Fechamento validado e contabilizado automaticamente.');
->>>>>>> origin/main
       }
       function askCollaboratorCode() { const code = prompt('Informe o código do colaborador para confirmar:'); if (code === null) return null; const c = state.collaborators.find(x => String(x.code) === String(code).trim()); if (!c) notify('Código inválido.', 'error'); return c || null; }
       function deleteWithAudit(kind, id) {
