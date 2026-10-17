@@ -9,7 +9,7 @@ export function defaultBusinessState() {
   const today = new Date();
   const month = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
   return {
-    business: { name: 'Meu negócio', doc: '', goal: 0, owner: 'Administrador', accountingFirstCycleStart: null },
+    business: { name: 'Meu negócio', doc: '', goal: 0, owner: 'Administrador', accountingFirstCycleStart: null, logo: '' },
     collaborators: [{ id: 'admin-default', name: 'Administrador', role: 'Gestor', code: '1234' }],
     transactions: [], openings: [], closings: [], auditLog: [],
     registers: { '1': { name: 'Caixa 01' }, '2': { name: 'Caixa 02' } },

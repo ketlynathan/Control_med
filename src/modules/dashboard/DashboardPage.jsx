@@ -90,8 +90,8 @@ export default function DashboardPage({ state, onNavigate }) {
           <YAxis tickLine={false} axisLine={false} width={64} tick={{ fill: '#6b7971', fontSize: 10 }} tickFormatter={value => formatCurrency(value / 100)} />
           <Tooltip labelFormatter={value => `Dia ${value} do ciclo`} formatter={value => formatCurrency(Number(value) / 100)} />
           <Legend />
-          <Line name="Ciclo atual" type="monotone" dataKey="currentCents" stroke="#176a54" strokeWidth={2.5} dot={false} connectNulls={false} />
-          <Line name="Ciclo anterior" type="monotone" dataKey="previousCents" stroke="#d07a55" strokeWidth={2} strokeDasharray="5 4" dot={false} />
+          <Line name="Ciclo atual" type="monotone" dataKey="currentCents" stroke="#bd202b" strokeWidth={2.5} dot={false} connectNulls={false} />
+          <Line name="Ciclo anterior" type="monotone" dataKey="previousCents" stroke="#947700" strokeWidth={2} strokeDasharray="5 4" dot={false} />
         </LineChart></ResponsiveContainer></div>
       </Panel>
 

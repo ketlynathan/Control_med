@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ArrowRight, ShieldCheck } from 'lucide-react';
+import drogariaLogo from '../assets/Drogaria Carvalhe.png';
 
 export default function LoginScreen({ onLogin, busy, error }) {
   const [createAccount, setCreateAccount] = useState(false);
@@ -18,7 +19,7 @@ export default function LoginScreen({ onLogin, busy, error }) {
   return (
     <main className="auth-layout">
       <section className="auth-intro">
-        <div className="auth-wordmark"><span className="brand-mark">F</span><span>Fluxo <small>Gestão financeira</small></span></div>
+        <div className="auth-wordmark"><span className="brand-mark"><img src={drogariaLogo} alt="" /></span><span>Fluxo <small>Gestão financeira</small></span></div>
         <div className="auth-message">
           <span className="eyebrow">Sua operação, em ordem</span>
           <h1>O caixa do negócio acompanha você.</h1>

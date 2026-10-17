@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from 'react';
+import drogariaLogo from '../assets/Drogaria Carvalhe.png';
 import {
   Activity, Boxes, BriefcaseBusiness, CalendarDays, CircleDollarSign, ClipboardList, FileChartColumn,
   LayoutDashboard, LogOut, Menu, RefreshCw, Settings, X,
@@ -45,7 +46,7 @@ export default function AppShell(props) {
     <div className="app-shell">
       {menuOpen && <button className="sidebar-scrim" aria-label="Fechar menu" onClick={() => setMenuOpen(false)} />}
       <aside className={`sidebar ${menuOpen ? 'open' : ''}`}>
-        <a className="brand" href="#inicio" onClick={event => { event.preventDefault(); navigate('dashboard'); }}><span className="brand-mark">F</span><span className="brand-copy"><strong>Fluxo</strong><small>Gestão financeira</small></span></a>
+        <a className="brand" href="#inicio" onClick={event => { event.preventDefault(); navigate('dashboard'); }}><span className="brand-mark"><img src={state.business.logo || drogariaLogo} alt="" /></span><span className="brand-copy"><strong>Fluxo</strong><small>Gestão financeira</small></span></a>
         <div className="sidebar-business"><span className="business-dot" /><span>{state.business.name || 'Meu negócio'}</span></div>
         <nav className="main-nav" aria-label="Navegação principal">
           {groups.map(group => <div className="nav-group" key={group}><span className="nav-label">{group}</span>{pages.filter(item => item.group === group).map(item => {

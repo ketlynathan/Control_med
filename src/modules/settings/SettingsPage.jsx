@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Download, Plus, Upload } from 'lucide-react';
+import { Download, Plus, Trash2, Upload } from 'lucide-react';
+import drogariaLogo from '../../assets/Drogaria Carvalhe.png';
 import { AUTH_EMAIL_KEY, CONFLICT_ARCHIVE_KEY, normalizeBusinessState } from '../../state/default-state.js';
 import { createId, formatDateTime } from '../../shared/format.js';
 import { DataTable, Field, FormActions, PageHeading, Panel } from '../../shared/components.jsx';
@@ -11,6 +12,30 @@ function downloadJSON(filename, value) {
   link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+async function prepareBusinessLogo(file) {
+  if (!file.type.startsWith('image/')) throw new Error('Escolha um arquivo de imagem.');
+  if (file.size > 12 * 1024 * 1024) throw new Error('A imagem deve ter no máximo 12 MB.');
+  const source = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = () => reject(new Error('Não foi possível abrir esta imagem.'));
+      image.src = source;
+    });
+    const scale = Math.min(1, 320 / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Não foi possível preparar esta imagem.');
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/webp', 0.82);
+  } finally {
+    URL.revokeObjectURL(source);
+  }
 }
 
 const emptyCollaborator = () => ({ id: '', name: '', role: 'Colaborador', code: '' });
@@ -34,6 +59,26 @@ export default function SettingsPage({ state, updateState, syncNow, lastSyncedAt
     updateState(current => ({ ...current, business: { ...current.business, ...business, goal: Number(business.goal) || 0 } }));
     businessDraftDirty.current = false;
     setNotice('Dados do negócio salvos e sincronizando.');
+  }
+
+  async function selectBusinessLogo(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const logo = await prepareBusinessLogo(file);
+      businessDraftDirty.current = true;
+      setBusiness(current => ({ ...current, logo }));
+      setNotice('Logo selecionado. Salve os dados do negócio para sincronizar.');
+    } catch (error) {
+      setNotice(error.message || 'Não foi possível carregar o logo.');
+    }
+  }
+
+  function removeBusinessLogo() {
+    businessDraftDirty.current = true;
+    setBusiness(current => ({ ...current, logo: '' }));
+    setNotice('Logo removido. Salve os dados do negócio para sincronizar.');
   }
 
   function saveCollaborator(event) {
@@ -91,7 +136,7 @@ export default function SettingsPage({ state, updateState, syncNow, lastSyncedAt
     <div className="settings-grid">
       <div className="settings-stack">
         <Panel title="Conta e sincronização" description="A mesma conta dá acesso aos dados em outros dispositivos."><div className="settings-metrics"><div><span>E-mail da conta</span><strong>{email}</strong></div><div><span>Estado do servidor</span><strong>Postgres · dados compartilhados</strong></div></div><div className="account-actions"><button className="button button-quiet" onClick={refresh} disabled={syncing}>{syncing ? 'Atualizando…' : '↻ Sincronizar agora'}</button><button className="button button-quiet danger-text" onClick={() => { if (window.confirm('Sair desta conta neste dispositivo? Seus dados continuam salvos no servidor.')) logout(); }}>Sair desta conta</button></div></Panel>
-        <Panel title="Dados do negócio" description="Essas informações são mantidas no estado existente da empresa."><form className="form-stack" data-sync-pause={businessDraftDirty.current ? 'true' : undefined} onSubmit={saveBusiness}><div className="form-grid"><Field label="Nome do negócio"><input required maxLength={120} value={business.name || ''} onChange={event => { businessDraftDirty.current = true; setBusiness({ ...business, name: event.target.value }); }} /></Field><Field label="CNPJ ou CPF"><input value={business.doc || ''} onChange={event => { businessDraftDirty.current = true; setBusiness({ ...business, doc: event.target.value }); }} /></Field><Field label="Meta mensal de entradas"><input type="number" min="0" step="0.01" value={business.goal || 0} onChange={event => { businessDraftDirty.current = true; setBusiness({ ...business, goal: event.target.value }); }} /></Field><Field label="Responsável"><input value={business.owner || ''} onChange={event => { businessDraftDirty.current = true; setBusiness({ ...business, owner: event.target.value }); }} /></Field><Field label="Início do primeiro ciclo"><input type="date" value={business.accountingFirstCycleStart || ''} onChange={event => { businessDraftDirty.current = true; setBusiness({ ...business, accountingFirstCycleStart: event.target.value || null }); }} /></Field></div><FormActions submitLabel="Salvar dados" /></form></Panel>
+        <Panel title="Dados do negócio" description="Essas informações são mantidas no estado existente da empresa."><form className="form-stack" data-sync-pause={businessDraftDirty.current ? 'true' : undefined} onSubmit={saveBusiness}><div className="form-grid"><Field label="Nome do negócio"><input required maxLength={120} value={business.name || ''} onChange={event => { businessDraftDirty.current = true; setBusiness({ ...business, name: event.target.value }); }} /></Field><Field label="CNPJ ou CPF"><input value={business.doc || ''} onChange={event => { businessDraftDirty.current = true; setBusiness({ ...business, doc: event.target.value }); }} /></Field><Field label="Meta mensal de entradas"><input type="number" min="0" step="0.01" value={business.goal || 0} onChange={event => { businessDraftDirty.current = true; setBusiness({ ...business, goal: event.target.value }); }} /></Field><Field label="Responsável"><input value={business.owner || ''} onChange={event => { businessDraftDirty.current = true; setBusiness({ ...business, owner: event.target.value }); }} /></Field><Field label="Início do primeiro ciclo"><input type="date" value={business.accountingFirstCycleStart || ''} onChange={event => { businessDraftDirty.current = true; setBusiness({ ...business, accountingFirstCycleStart: event.target.value || null }); }} /></Field></div><Field label="Logo do negócio"><div className="business-logo-editor"><img className="business-logo-preview" src={business.logo || drogariaLogo} alt="Prévia do logo" /><label className="button button-quiet file-button"><Upload size={16} />Escolher imagem<input type="file" accept="image/*" onChange={selectBusinessLogo} /></label>{business.logo && <button className="button button-quiet danger-text" type="button" onClick={removeBusinessLogo}><Trash2 size={15} />Usar logo padrão</button>}</div></Field><FormActions submitLabel="Salvar dados" /></form></Panel>
         <Panel title="Colaboradores e códigos" description="O código é solicitado para confirmar fechamentos e exclusões auditadas." action={<button className="button button-quiet button-small" onClick={() => setCollaborator(emptyCollaborator())}><Plus size={15} />Adicionar</button>}>
           {collaborator && <form className="form-stack inline-editor" onSubmit={saveCollaborator}><div className="form-grid"><Field label="Nome"><input required value={collaborator.name} onChange={event => setCollaborator({ ...collaborator, name: event.target.value })} /></Field><Field label="Função"><input value={collaborator.role || ''} onChange={event => setCollaborator({ ...collaborator, role: event.target.value })} /></Field><Field label="Código"><input required inputMode="numeric" pattern="[0-9]{4,8}" minLength="4" maxLength="8" value={collaborator.code} onChange={event => setCollaborator({ ...collaborator, code: event.target.value })} /></Field></div><FormActions onCancel={() => setCollaborator(null)} submitLabel="Salvar colaborador" /></form>}
           <DataTable rows={state.collaborators} emptyTitle="Nenhum colaborador cadastrado" columns={[{ key: 'name', label: 'Nome', render: row => <span className="cell-stack"><strong>{row.name}</strong><small>{row.role || 'Colaborador'}</small></span> }, { key: 'code', label: 'Código', render: row => '••••' }, { key: 'actions', label: '', render: row => <span className="row-actions"><button className="button button-quiet button-small" onClick={() => setCollaborator({ ...row })}>Editar</button><button className="button button-quiet button-small danger-text" onClick={() => removeCollaborator(row)}>Excluir</button></span> }]} />
