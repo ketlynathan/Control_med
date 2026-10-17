@@ -136,6 +136,7 @@ export default function CashPage({ state, updateState }) {
     { key: 'collaborator', label: 'Responsável', render: row => state.collaborators.find(person => person.id === row.collaborator)?.name || 'Não informado' },
     { key: 'entryTotal', label: 'Entradas', numeric: true, className: 'text-positive', render: row => formatCurrency(row.entryTotal) },
     { key: 'exitTotal', label: 'Despesas', numeric: true, className: 'text-negative', render: row => formatCurrency(row.exitTotal) },
+    { key: 'expenseDetails', label: 'Despesas detalhadas', render: row => Array.isArray(row.expenses) && row.expenses.length ? <span className="cell-stack">{row.expenses.map((expense, index) => <small key={expense.id || index}>{expense.description || 'Despesa'}: {formatCurrency(expense.amount)}</small>)}</span> : Number(row.exitTotal) > 0 ? <span className="cell-stack"><small>Detalhamento indisponível para este fechamento histórico.</small></span> : '—' },
     { key: 'actual', label: 'Contado', numeric: true, render: row => formatCurrency(row.actual) },
     { key: 'actions', label: '', render: row => <span className="row-actions"><button className="button button-quiet button-small" onClick={() => startEdit(row)}>Editar</button><button className="button button-quiet button-small danger-text" disabled={!window.FinanceAnalytics.canEditClosing(row)} title={window.FinanceAnalytics.canEditClosing(row) ? 'Excluir com registro de motivo e responsável' : 'Fechamento sem ID ou data válidos'} onClick={() => deleteClosing(row)}>Excluir</button></span> },
   ];

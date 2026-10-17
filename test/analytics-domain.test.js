@@ -290,6 +290,15 @@ test('interface React do Caixa permite excluir e registra motivo, autor e snapsh
   assert.match(cashPage, /Fundo de caixa editado'[\s\S]*?reason,[\s\S]*?before: previous,[\s\S]*?after: saved/);
 });
 
+test('histórico React do Caixa mostra total de despesas e seus itens no dia do fechamento', () => {
+  const cashPage = readFileSync(require.resolve('../src/modules/cash/CashPage.jsx'), 'utf8');
+  assert.match(cashPage, /key: 'exitTotal', label: 'Despesas'/);
+  assert.match(cashPage, /key: 'expenseDetails', label: 'Despesas detalhadas'/);
+  assert.match(cashPage, /row\.expenses\.map\(\(expense, index\)/);
+  assert.match(cashPage, /formatCurrency\(expense\.amount\)/);
+  assert.match(cashPage, /formatDate\(row\.date\)/);
+});
+
 test('fechamentos históricos com ID e data válidos podem ser retificados', () => {
   assert.equal(canEditClosing({ id: 'today', date: '2026-10-05' }), true);
   assert.equal(canEditClosing({ id: 'yesterday', date: '2026-10-04' }), true);
@@ -355,7 +364,7 @@ test('relatório de ciclo soma apenas fechamentos/despesas dentro do intervalo e
   assert.equal(result.cashExitsCents, 1500);
   assert.equal(result.cashBalanceCents, 8500);
   assert.deepEqual(result.categoryTotalsCents, {
-    'Alimentação': 500, 'Transporte': 1000, 'Medicamentos': 0, 'Outros / Não classificado': 0,
+    'Alimentação': 500, 'Transporte': 1000, 'Medicamentos': 0, 'Pagamentos': 0, 'Outros / Não classificado': 0,
   });
   assert.deepEqual(result.paymentTotalsCents, { pix: 1000, debit: 2000, credit: 3000, cash: 4000, other: 0 });
   assert.deepEqual(result.dailyEntriesCents, [{ date: '2026-10-06', entriesCents: 10000 }]);
@@ -370,6 +379,20 @@ test('relatório agrupa entradas por dia em centavos e respeita o intervalo do c
     { id: 'outside', date: '2026-10-05', entryTotal: 99 },
   ] }, { start: '2026-10-06', end: '2026-11-05' });
   assert.deepEqual(report.dailyEntriesCents, [{ date: '2026-10-06', entriesCents: 1734 }]);
+});
+
+test('relatório totaliza em Pagamentos todas as despesas com descrição de pagamento', () => {
+  const report = buildFinancialCycleReport({ closings: [{
+    id: 'payments', date: '2026-10-06', exitTotal: 734.22,
+    expenses: [
+      { description: 'Pagamento (Cartão-Mãe)', category: 'Financeiro', amount: 354.22 },
+      { description: 'Pagamento sabão', amount: 360 },
+      { description: 'Almoço', amount: 20 },
+    ],
+  }] }, { start: '2026-10-06', end: '2026-11-05' });
+  assert.equal(report.categoryTotalsCents.Pagamentos, 71422);
+  assert.equal(report.categoryTotalsCents['Alimentação'], 2000);
+  assert.equal(Object.values(report.categoryTotalsCents).reduce((sum, value) => sum + value, 0), report.cashExitsCents);
 });
 
 test('relatório evita dupla subtração somente para vínculos explícitos e confirmados', () => {

@@ -177,6 +177,10 @@ tbody tr:hover { background: #fbfcfb; }
 .segmented-control button, .auth-tabs button { min-height: 29px; padding: 0 10px; border: 0; border-radius: 4px; color: var(--ink-muted); background: transparent; font-size: 10px; font-weight: 700; }
 .segmented-control button.selected { color: var(--brand-strong); background: white; box-shadow: 0 1px 3px #1e39271c; }
 .toolbar-select { width: auto; min-width: 130px; min-height: 37px; }
+.installment-cell { display: grid; min-width: 82px; gap: 4px; justify-items: start; color: #39343a; font-size: 11px; font-weight: 700; }
+.installment-cell small { color: var(--ink-muted); font-size: 9px; font-weight: 500; white-space: nowrap; }
+.installment-track { display: block; width: 72px; height: 5px; overflow: hidden; border-radius: 4px; background: #eee9e7; }
+.installment-track > span { display: block; height: 100%; border-radius: inherit; background: var(--brand); transition: width .2s ease; }
 .report-result { display: grid; gap: 6px; padding: 18px 20px; border-left: 4px solid var(--brand); background: #fff; }
 .report-result span { color: var(--ink-muted); font-size: 11px; }
 .report-result strong { font-family: Manrope, sans-serif; font-size: 25px; }

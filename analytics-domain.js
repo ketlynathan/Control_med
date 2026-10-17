@@ -14,6 +14,7 @@
   const registerMatches = (record, register) => !hasFilter(register) || String(record.register || '') === String(register);
   const userMatches = (record, user) => !hasFilter(user) || String(record.collaborator || record.collaboratorId || '') === String(user);
   const normalizedDescription = value => clean(value).toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
+  const isPaymentDescription = value => /\bpagamentos?\b/.test(normalizedDescription(value));
   const paymentMethod = value => {
     const method = normalizedDescription(value);
     if (['cash', 'dinheiro', 'especie'].includes(method)) return 'cash';
@@ -25,7 +26,7 @@
     if (['cartao', 'card'].includes(method)) return 'card_unspecified';
     return 'nao_informado';
   };
-  const expenseCategories = ['Alimentação', 'Transporte', 'Medicamentos', 'Mercadorias', 'Material / Operacional', 'Financeiro', 'Outros / Não classificado'];
+  const expenseCategories = ['Alimentação', 'Transporte', 'Medicamentos', 'Mercadorias', 'Material / Operacional', 'Pagamentos', 'Financeiro', 'Outros / Não classificado'];
 
   function inferExpenseCategory(description, existingCategory = '') {
     if (clean(existingCategory)) {
@@ -40,6 +41,7 @@
       return clean(existingCategory);
     }
     const text = normalizedDescription(description);
+    if (isPaymentDescription(text)) return 'Pagamentos';
     if (/agua sanitaria|detergente|sabonete|tinta|papel|fita|pano de chao|copo descartavel|material/.test(text)) return 'Material / Operacional';
     if (/uber|passagem|transporte|gasolina|frete|deslocamento|onibus|taxi/.test(text)) return 'Transporte';
     if (/medicamento|remedio|drogaria|farmacia/.test(text)) return 'Medicamentos';
@@ -566,7 +568,7 @@
       return !!date && (!range.start || date >= range.start) && (!range.end || date <= range.end);
     };
     const closings = (Array.isArray(state.closings) ? state.closings : []).filter(row => inside(row.date));
-    const categories = ['Alimentação', 'Transporte', 'Medicamentos', 'Outros / Não classificado'];
+    const categories = ['Alimentação', 'Transporte', 'Medicamentos', 'Pagamentos', 'Outros / Não classificado'];
     const categoryTotalsCents = Object.fromEntries(categories.map(category => [category, 0]));
     const paymentTotalsCents = { pix: 0, debit: 0, credit: 0, cash: 0, other: 0 };
     const dailyEntriesCents = new Map();
@@ -597,7 +599,11 @@
       expenses.forEach((expense, index) => {
         const sourceId = `closing-expense:${String(closing.id || '')}:${index}`;
         const overrides = state.analyticsCategories || {};
-        const inferred = inferExpenseCategory(expense.description, overrides[sourceId] || expense.category);
+        const inferred = overrides[sourceId]
+          ? inferExpenseCategory(expense.description, overrides[sourceId])
+          : isPaymentDescription(expense.description)
+            ? 'Pagamentos'
+            : inferExpenseCategory(expense.description, expense.category);
         const category = categories.includes(inferred) ? inferred : 'Outros / Não classificado';
         categoryTotalsCents[category] += cents(expense.amount);
         const id = String(expense.id || sourceId);
