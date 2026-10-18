@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
-const { cents, getCashBaseForClosing, calculateClosingCashReconciliation, buildFinancialLedger, filterFinancialLedger, buildRegisterSummary, buildModuleMetrics, canEditClosing, canEditClosingToday, buildClosingRevision, buildFinancialCycleReport, summarizePayablesByCategory, closingExpenseKey } = require('../analytics-domain');
+const { cents, getCashBaseForClosing, calculateClosingCashReconciliation, buildFinancialLedger, filterFinancialLedger, buildRegisterSummary, buildModuleMetrics, canEditClosing, canEditClosingToday, buildClosingRevision, buildFinancialCycleReport, summarizePayablesByCategory, summarizeUpcomingPayablesByDay, closingExpenseKey } = require('../analytics-domain');
 
 const state = {
   transactions: [
@@ -441,4 +441,28 @@ test('Contas a Pagar mostra contagem e valores pagos/pendentes em colunas indepe
   assert.equal(supplier.totalCents, 14000);
   assert.equal(supplier.paidCents, 10000);
   assert.equal(supplier.pendingCents, 4000);
+});
+
+test('Contas a Pagar agrupa total por dia nos próximos 30 dias em centavos', () => {
+  const result = summarizeUpcomingPayablesByDay([
+    { dueDate: '2026-10-20', amount: 10.1, paid: false },
+    { dueDate: '2026-10-20', amount: 20, paid: false },
+    { dueDate: '2026-10-18', amount: 15, paid: false },
+    { dueDate: '2026-10-18', amount: 100, paid: true },
+    { dueDate: '2026-10-16', amount: 50, paid: false },
+    { dueDate: '2026-11-17', amount: 40, paid: false },
+  ], '2026-10-17', 30);
+
+  assert.deepEqual(result, [
+    { date: '2026-10-18', count: 1, totalCents: 1500 },
+    { date: '2026-10-20', count: 2, totalCents: 3010 },
+  ]);
+});
+
+test('Contas a Pagar mantém os detalhes diários recolhidos até a expansão', () => {
+  const payablePage = readFileSync(require.resolve('../src/modules/payables/PayablesPage.jsx'), 'utf8');
+  assert.match(payablePage, /<details className="due-day-item"/);
+  assert.match(payablePage, /<summary className="due-day-summary">/);
+  assert.match(payablePage, /dayEntries\.map/);
+  assert.match(payablePage, /formatCurrency\(entry\.amount\)/);
 });

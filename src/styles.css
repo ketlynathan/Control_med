@@ -181,6 +181,22 @@ tbody tr:hover { background: #fbfcfb; }
 .installment-cell small { color: var(--ink-muted); font-size: 9px; font-weight: 500; white-space: nowrap; }
 .installment-track { display: block; width: 72px; height: 5px; overflow: hidden; border-radius: 4px; background: #eee9e7; }
 .installment-track > span { display: block; height: 100%; border-radius: inherit; background: var(--brand); transition: width .2s ease; }
+.due-day-list { display: grid; }
+.due-day-item + .due-day-item { border-top: 1px solid var(--line); }
+.due-day-summary { display: grid; grid-template-columns: minmax(110px, 1fr) auto minmax(100px, auto); align-items: center; gap: 14px; min-height: 50px; padding: 9px 17px; cursor: pointer; list-style: none; }
+.due-day-summary::-webkit-details-marker { display: none; }
+.due-day-summary::after { content: "+"; grid-column: 4; color: var(--brand); font-size: 16px; }
+.due-day-item[open] > .due-day-summary::after { content: "−"; }
+.due-day-date { color: #332d32; font-size: 11px; font-weight: 700; }
+.due-day-count { color: var(--ink-muted); font-size: 10px; }
+.due-day-summary > strong { color: var(--brand-strong); font-size: 12px; text-align: right; }
+.due-day-details { display: grid; padding: 0 17px 11px; background: #faf9f8; }
+.due-day-account { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid #eeecea; }
+.due-day-account-name { display: grid; gap: 3px; min-width: 0; }
+.due-day-account-name strong { overflow-wrap: anywhere; color: #39343a; font-size: 11px; }
+.due-day-account-name small { color: var(--ink-muted); font-size: 10px; line-height: 1.4; }
+.due-day-account > strong { flex: 0 0 auto; color: #39343a; font-size: 11px; }
+.due-day-empty { margin: 0; padding: 16px 17px; color: var(--ink-muted); font-size: 11px; }
 .report-result { display: grid; gap: 6px; padding: 18px 20px; border-left: 4px solid var(--brand); background: #fff; }
 .report-result span { color: var(--ink-muted); font-size: 11px; }
 .report-result strong { font-family: Manrope, sans-serif; font-size: 25px; }
@@ -232,6 +248,8 @@ tbody tr:hover { background: #fbfcfb; }
   .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dashboard-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .dashboard-chart-grid { grid-template-columns: 1fr; gap: 13px; }
+  .due-day-summary { grid-template-columns: minmax(85px, 1fr) auto minmax(88px, auto); gap: 8px; padding-right: 13px; padding-left: 13px; }
+  .due-day-details { padding-right: 13px; padding-left: 13px; }
   .sync-banner, .offline-banner { margin-right: 22px; margin-left: 22px; }
 }
 @media (max-width: 760px) {

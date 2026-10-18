@@ -662,6 +662,26 @@
     return { rows, total };
   }
 
+  function summarizeUpcomingPayablesByDay(entries = [], today = new Date().toISOString().slice(0, 10), horizonDays = 30) {
+    const start = new Date(`${today}T12:00:00`);
+    if (!Number.isFinite(start.getTime())) return [];
+    const end = new Date(start);
+    end.setDate(end.getDate() + Math.max(0, Number(horizonDays) || 0));
+    const endDate = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+    const groups = new Map();
+
+    (Array.isArray(entries) ? entries : []).forEach(entry => {
+      const date = String(entry.dueDate || '').slice(0, 10);
+      if (entry.paid || !date || date < today || date > endDate) return;
+      const group = groups.get(date) || { date, count: 0, totalCents: 0 };
+      group.count++;
+      group.totalCents += cents(entry.amount);
+      groups.set(date, group);
+    });
+
+    return [...groups.values()].sort((left, right) => left.date.localeCompare(right.date));
+  }
+
   function buildClosingRevision(closing, changes, updatedAt = new Date().toISOString()) {
     if (!closing || !clean(closing.id)) throw new Error('Fechamento inválido para retificação.');
     const before = JSON.parse(JSON.stringify(closing));
@@ -669,7 +689,7 @@
     return { before, after };
   }
 
-  const api = { cents, amount, inferExpenseCategory, closingExpenseKey, buildFinancialLedger, filterFinancialLedger, getCashBaseForClosing, calculateClosingCashReconciliation, buildRegisterSummary, buildModuleMetrics, canEditClosing, canEditClosingToday, buildClosingRevision, buildFinancialCycleReport, summarizePayablesByCategory, expenseCategories };
+  const api = { cents, amount, inferExpenseCategory, closingExpenseKey, buildFinancialLedger, filterFinancialLedger, getCashBaseForClosing, calculateClosingCashReconciliation, buildRegisterSummary, buildModuleMetrics, canEditClosing, canEditClosingToday, buildClosingRevision, buildFinancialCycleReport, summarizePayablesByCategory, summarizeUpcomingPayablesByDay, expenseCategories };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.FinanceAnalytics = api;
 })(typeof globalThis !== 'undefined' ? globalThis : window);

@@ -66,6 +66,7 @@ export default function PayablesPage({ state, updateState }) {
     (sum, { progress }) => sum + progress.remaining,
     0,
   );
+  const upcomingByDay = window.FinanceAnalytics.summarizeUpcomingPayablesByDay(entries);
   const filtered = entries
     .filter(
       (row) =>
@@ -207,6 +208,47 @@ export default function PayablesPage({ state, updateState }) {
           </button>
         </div>
       )}
+      <Panel
+        title="Próximos vencimentos"
+        description="Total a pagar por dia nos próximos 30 dias. Abra uma data para ver as contas."
+      >
+        {upcomingByDay.length ? (
+          <div className="due-day-list">
+            {upcomingByDay.map((day) => {
+              const dayEntries = open.filter((entry) => entry.dueDate === day.date);
+              return (
+                <details className="due-day-item" key={day.date}>
+                  <summary className="due-day-summary">
+                    <span className="due-day-date">{formatDate(day.date)}</span>
+                    <span className="due-day-count">{day.count} conta(s)</span>
+                    <strong>{formatCurrency(day.totalCents / 100)}</strong>
+                  </summary>
+                  <div className="due-day-details">
+                    {dayEntries.map((entry) => {
+                      const progress = getInstallmentProgress(entry);
+                      return (
+                        <div className="due-day-account" key={entry.id}>
+                          <span className="due-day-account-name">
+                            <strong>{entry.supplier || entry.description || "Conta"}</strong>
+                            <small>
+                              {entry.category || "Sem categoria"}
+                              {entry.description && entry.supplier ? ` · ${entry.description}` : ""}
+                              {progress ? ` · Parcela ${progress.current}/${progress.total}` : ""}
+                            </small>
+                          </span>
+                          <strong>{formatCurrency(entry.amount)}</strong>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="due-day-empty">Nenhuma conta em aberto vence nos próximos 30 dias.</p>
+        )}
+      </Panel>
       {editor && (
         <Panel
           title={editor.id ? "Editar conta" : "Nova conta"}
