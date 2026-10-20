@@ -47,15 +47,24 @@
   }
   function range(period, options) {
     const match = /^(\d{4})-(\d{2})$/.exec(String(period || ''));
-    const base = match ? { year: Number(match[1]), month: Number(match[2]) } : (() => { const d = parse(new Date()); return { year: d.year, month: d.month }; })();
+    const base = match
+      ? { year: Number(match[1]), month: Number(match[2]) }
+      : (() => { const d = parse(new Date()); return { year: d.year, month: d.month }; })();
     const next = addMonths(base.year, base.month, 1);
     const first = initialStart(options);
-    const isFirstPeriod = first && periodKey(first.year, first.month) === periodKey(base.year, base.month);
-    return {
-      key: periodKey(base.year, base.month),
-      start: isFirstPeriod ? `${periodKey(first.year, first.month)}-05` : `${periodKey(base.year, base.month)}-06`,
-      end: `${next.year}-${String(next.month).padStart(2, '0')}-05`,
-    };
+    const currentKey = periodKey(base.year, base.month);
+    const firstKey = first ? periodKey(first.year, first.month) : null;
+
+    // Sem data inicial configurada, todos os ciclos existem (comportamento 06→05 de sempre).
+    const exists = !first || (base.year * 12 + base.month) >= (first.year * 12 + first.month);
+    const isFirstPeriod = Boolean(first) && firstKey === currentKey;
+    const start = isFirstPeriod ? `${currentKey}-05` : `${currentKey}-06`;
+    let end = `${next.year}-${String(next.month).padStart(2, '0')}-05`;
+
+    // O período imediatamente anterior ao primeiro não pode alcançar o dia 05 do primeiro ciclo.
+    if (!exists && end >= `${firstKey}-05`) end = `${firstKey}-04`;
+
+    return { key: currentKey, exists, start, end };
   }
   function label(period, options) {
     const r = range(period, options);
@@ -65,7 +74,7 @@
   function contains(value, period, options) {
     const text = iso(value);
     const r = range(period || key(value, options), options);
-    return text >= r.start && text <= r.end;
+    return r.exists && text >= r.start && text <= r.end;
   }
   function shift(period, amount) {
     const match = /^(\d{4})-(\d{2})$/.exec(String(period || ''));
